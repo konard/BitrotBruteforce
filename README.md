@@ -22,6 +22,7 @@ Arguments:
 Options:
   -r, --restore   Должна ли утилита самостоятельно восстановить данные
   -t, --threads <threads>  Сколько потоков использовать, по умолчанию все доступные [default: Environment.ProcessorCount]
+  -g, --gpu                Use CUDA-compatible gpu
 ```
 
 ```
