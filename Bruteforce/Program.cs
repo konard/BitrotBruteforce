@@ -197,6 +197,10 @@ class Worker
         {
             PersistenceManager.FlipBit(dataPath, torrent, piece.Index, bitIndex);
         }
+        else if(bitIndex < 0)
+        {
+            Console.WriteLine("Excessive data corruption, failed to fix");
+        }
 
         sw.Stop();
 
