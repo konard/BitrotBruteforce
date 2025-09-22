@@ -10,7 +10,8 @@
         <Platforms>x64</Platforms>
     </PropertyGroup>
 
-    <ItemGroup>
+    <!-- Windows CUDA DLLs -->
+    <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
       <Content Include="..\CudaAlignedBitrotFinder\bin\x64\Release\CudaAlignedBitrotFinder.dll">
         <Link>libs\CudaAlignedBitrotFinder.dll</Link>
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -19,6 +20,21 @@
         <Link>libs\CudaUnalignedBitrotFinder.dll</Link>
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
+    </ItemGroup>
+
+    <!-- Linux CUDA Shared Objects -->
+    <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+      <Content Include="..\CudaAlignedBitrotFinder\bin\x64\Release\CudaAlignedBitrotFinder.dll">
+        <Link>libs\CudaAlignedBitrotFinder.dll</Link>
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="..\CudaUnalignedBitrotFinder\bin\x64\Release\CudaUnalignedBitrotFinder.dll">
+        <Link>libs\CudaUnalignedBitrotFinder.dll</Link>
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
       <Content Include="..\README.md">
         <Link>README.md</Link>
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -57,7 +73,8 @@
       <None Remove="Properties\launchSettings.json" />
     </ItemGroup>
     
-    <ItemGroup>
+    <!-- Windows Project References -->
+    <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
         <ProjectReference Include="..\CudaAlignedBitrotFinder/CudaAlignedBitrotFinder.vcxproj">
             <Project>{689208EA-24A1-48C5-9ACE-202640267B40}</Project>
             <Name>CudaAlignedBitrotFinder</Name>
@@ -66,9 +83,6 @@
             <OutputItemType>None</OutputItemType>
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </ProjectReference>
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="..\CudaUnalignedBitrotFinder/CudaUnalignedBitrotFinder.vcxproj">
             <Project>{AC30D969-E8D4-43A5-9934-9B80310A01EE}</Project>
             <Name>CudaUnalignedBitrotFinder</Name>
