@@ -10,8 +10,8 @@
         <Platforms>x64</Platforms>
     </PropertyGroup>
 
-    <!-- Windows CUDA DLLs -->
-    <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <!-- Windows CUDA DLLs for Windows runtime -->
+    <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' or ('$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT')">
       <Content Include="..\CudaAlignedBitrotFinder\bin\x64\Release\CudaAlignedBitrotFinder.dll">
         <Link>libs\CudaAlignedBitrotFinder.dll</Link>
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -22,14 +22,14 @@
       </Content>
     </ItemGroup>
 
-    <!-- Linux CUDA Shared Objects -->
-    <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
-      <Content Include="..\CudaAlignedBitrotFinder\bin\x64\Release\CudaAlignedBitrotFinder.dll">
-        <Link>libs\CudaAlignedBitrotFinder.dll</Link>
+    <!-- Linux CUDA Shared Objects for Linux runtime -->
+    <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
+      <Content Include="..\CudaAlignedBitrotFinder\bin\linux-x64\libCudaAlignedBitrotFinder.so">
+        <Link>libs\CudaAlignedBitrotFinder.so</Link>
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
-      <Content Include="..\CudaUnalignedBitrotFinder\bin\x64\Release\CudaUnalignedBitrotFinder.dll">
-        <Link>libs\CudaUnalignedBitrotFinder.dll</Link>
+      <Content Include="..\CudaUnalignedBitrotFinder\bin\linux-x64\libCudaUnalignedBitrotFinder.so">
+        <Link>libs\CudaUnalignedBitrotFinder.so</Link>
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
@@ -73,8 +73,8 @@
       <None Remove="Properties\launchSettings.json" />
     </ItemGroup>
     
-    <!-- Windows Project References -->
-    <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <!-- Windows Project References for Windows build -->
+    <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' or ('$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT')">
         <ProjectReference Include="..\CudaAlignedBitrotFinder/CudaAlignedBitrotFinder.vcxproj">
             <Project>{689208EA-24A1-48C5-9ACE-202640267B40}</Project>
             <Name>CudaAlignedBitrotFinder</Name>
@@ -90,6 +90,24 @@
             <Private>false</Private>
             <OutputItemType>None</OutputItemType>
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </ProjectReference>
+    </ItemGroup>
+
+    <!-- Linux Project References for cross-compilation from Windows -->
+    <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64' and '$(OS)' == 'Windows_NT'">
+        <ProjectReference Include="..\CudaAlignedBitrotFinder/CudaAlignedBitrotFinder.Linux.vcxproj">
+            <Project>{689208EA-24A1-48C5-9ACE-202640267B41}</Project>
+            <Name>CudaAlignedBitrotFinderLinux</Name>
+            <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+            <Private>false</Private>
+            <OutputItemType>None</OutputItemType>
+        </ProjectReference>
+        <ProjectReference Include="..\CudaUnalignedBitrotFinder/CudaUnalignedBitrotFinder.Linux.vcxproj">
+            <Project>{AC30D969-E8D4-43A5-9934-9B80310A01EF}</Project>
+            <Name>CudaUnalignedBitrotFinderLinux</Name>
+            <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+            <Private>false</Private>
+            <OutputItemType>None</OutputItemType>
         </ProjectReference>
     </ItemGroup>
 </Project>

@@ -1,0 +1,22 @@
+<Project>
+  <PropertyGroup>
+    <!-- Detect cross-compilation scenario -->
+    <IsCrossCompiling Condition="'$(RuntimeIdentifier)' == 'linux-x64' and '$(OS)' == 'Windows_NT'">true</IsCrossCompiling>
+
+    <!-- Auto-build CUDA modules for Linux when cross-compiling -->
+    <BuildCudaLinuxModules Condition="'$(IsCrossCompiling)' == 'true'">true</BuildCudaLinuxModules>
+  </PropertyGroup>
+
+  <!-- Pre-build event to compile CUDA modules for Linux -->
+  <Target Name="BuildCudaForLinux" BeforeTargets="Build" Condition="'$(BuildCudaLinuxModules)' == 'true'">
+    <Message Importance="high" Text="Cross-compiling CUDA modules for Linux x64..." />
+
+    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)build-cuda-cross-compile.ps1&quot; -Module CudaAlignedBitrotFinder"
+          WorkingDirectory="$(MSBuildThisFileDirectory)" />
+
+    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)build-cuda-cross-compile.ps1&quot; -Module CudaUnalignedBitrotFinder"
+          WorkingDirectory="$(MSBuildThisFileDirectory)" />
+
+    <Message Importance="high" Text="CUDA modules cross-compilation completed." />
+  </Target>
+</Project>
