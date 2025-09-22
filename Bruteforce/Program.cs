@@ -173,22 +173,24 @@ class Worker
         var sw = Stopwatch.StartNew();
 
         int bitIndex;
-        
+
         if (useGpu)
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            // Try to use GPU (either CUDA or ROCm)
+            if (BruteforceGpu.IsGpuAvailable)
             {
-                Console.WriteLine("YOUR LINUX IS MADE FOR SUFFERING, NOT FOR SPEED");
-                Console.WriteLine("THE GPU ACCELERATION FUNCTION IS NOT AVAILABLE BECAUSE FUCK YOU WITH YOUR FUCKING LINUX");
-                Console.WriteLine("!!!!!");
-                bitIndex = BruteforceParallel.Bruteforce(piece.Bytes, piece.Hash.ToByteArrayFromHex(), countOfThreads);
+                Console.WriteLine("Using GPU acceleration");
+                bitIndex = BruteforceGpu.Bruteforce(piece.Bytes, piece.Hash.ToByteArrayFromHex());
             }
             else
             {
-                bitIndex = BruteforceCuda.Bruteforce(piece.Bytes, piece.Hash.ToByteArrayFromHex());
+                Console.WriteLine("GPU requested but not available. Falling back to CPU");
+                bitIndex = BruteforceParallel.Bruteforce(piece.Bytes, piece.Hash.ToByteArrayFromHex(), countOfThreads);
             }
+        }
         else
         {
-            Console.WriteLine("YOU REALLY WANT TO NOT USE GPU?!!");
+            Console.WriteLine("Using CPU with parallel processing");
             bitIndex = BruteforceParallel.Bruteforce(piece.Bytes, piece.Hash.ToByteArrayFromHex(), countOfThreads);
         }
 
@@ -246,22 +248,21 @@ class Worker
         
         if (useGpu)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            // Try to use GPU (either CUDA or ROCm)
+            if (BruteforceGpu.IsGpuAvailable)
             {
-                Console.WriteLine("YOUR LINUX IS MADE FOR SUFFERING, NOT FOR SPEED");
-                Console.WriteLine("THE GPU ACCELERATION FUNCTION IS NOT AVAILABLE BECAUSE FUCK YOU WITH YOUR FUCKING LINUX");
-                Console.WriteLine("!!!!!");
-                bitIndex = BruteforceParallel.Bruteforce(data, pieceHash.ToByteArrayFromHex(), countOfThreads);
+                Console.WriteLine("Using GPU acceleration");
+                bitIndex = BruteforceGpu.Bruteforce(data, pieceHash.ToByteArrayFromHex());
             }
             else
             {
-                bitIndex = BruteforceCuda.Bruteforce(data, pieceHash.ToByteArrayFromHex());
+                Console.WriteLine("GPU requested but not available. Falling back to CPU");
+                bitIndex = BruteforceParallel.Bruteforce(data, pieceHash.ToByteArrayFromHex(), countOfThreads);
             }
-
         }
         else
         {
-            Console.WriteLine("YOU REALLY WANT TO NOT USE GPU?!!");
+            Console.WriteLine("Using CPU with parallel processing");
             bitIndex = BruteforceParallel.Bruteforce(data, pieceHash.ToByteArrayFromHex(), countOfThreads);
         }
 
