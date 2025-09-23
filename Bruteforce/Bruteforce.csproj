@@ -24,12 +24,20 @@
 
     <!-- Linux CUDA Shared Objects for Linux runtime -->
     <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
-      <Content Include="..\CudaAlignedBitrotFinder\bin\linux-x64\libCudaAlignedBitrotFinder.so">
+      <Content Include="..\CudaAlignedBitrotFinder\bin\linux-x64\CudaAlignedBitrotFinder.so"
+               Condition="Exists('..\CudaAlignedBitrotFinder\bin\linux-x64\CudaAlignedBitrotFinder.so')">
         <Link>libs\CudaAlignedBitrotFinder.so</Link>
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
-      <Content Include="..\CudaUnalignedBitrotFinder\bin\linux-x64\libCudaUnalignedBitrotFinder.so">
+      <Content Include="..\CudaUnalignedBitrotFinder\bin\linux-x64\CudaUnalignedBitrotFinder.so"
+               Condition="Exists('..\CudaUnalignedBitrotFinder\bin\linux-x64\CudaUnalignedBitrotFinder.so')">
         <Link>libs\CudaUnalignedBitrotFinder.so</Link>
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <!-- Include placeholder if .so files not yet built -->
+      <Content Include="..\CudaAlignedBitrotFinder\bin\linux-x64\BUILD_ON_LINUX.txt"
+               Condition="!Exists('..\CudaAlignedBitrotFinder\bin\linux-x64\CudaAlignedBitrotFinder.so')">
+        <Link>libs\BUILD_ON_LINUX.txt</Link>
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
@@ -93,21 +101,4 @@
         </ProjectReference>
     </ItemGroup>
 
-    <!-- Linux Project References for cross-compilation from Windows -->
-    <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64' and '$(OS)' == 'Windows_NT'">
-        <ProjectReference Include="..\CudaAlignedBitrotFinder/CudaAlignedBitrotFinder.Linux.vcxproj">
-            <Project>{689208EA-24A1-48C5-9ACE-202640267B41}</Project>
-            <Name>CudaAlignedBitrotFinderLinux</Name>
-            <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-            <Private>false</Private>
-            <OutputItemType>None</OutputItemType>
-        </ProjectReference>
-        <ProjectReference Include="..\CudaUnalignedBitrotFinder/CudaUnalignedBitrotFinder.Linux.vcxproj">
-            <Project>{AC30D969-E8D4-43A5-9934-9B80310A01EF}</Project>
-            <Name>CudaUnalignedBitrotFinderLinux</Name>
-            <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-            <Private>false</Private>
-            <OutputItemType>None</OutputItemType>
-        </ProjectReference>
-    </ItemGroup>
 </Project>
