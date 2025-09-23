@@ -22,12 +22,12 @@ jobs:
     - name: Test Windows Build (without vcxproj dependencies)
       run: |
         cd Bruteforce
-        dotnet build Bruteforce.csproj -c Release /p:BuildProjectReferences=false
+        dotnet build Bruteforce-CI.csproj -c Release
 
     - name: Test Linux Publishing from Windows
       run: |
         cd Bruteforce
-        dotnet publish Bruteforce.csproj -r linux-x64 -c Release --self-contained /p:BuildProjectReferences=false
+        dotnet publish Bruteforce-CI.csproj -r linux-x64 -c Release --self-contained
 
     - name: Check if Linux publish worked
       shell: pwsh
