@@ -1,6 +1,6 @@
 # Linux CUDA Module
 
-This directory should contain `CudaUnalignedBitrotFinder.so` built on a Linux machine.
+⚠️ **Current file is a placeholder** - The actual `CudaUnalignedBitrotFinder.so` must be built on a Linux machine with CUDA.
 
 ## Building
 

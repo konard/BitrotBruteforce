@@ -8,3 +8,8 @@ riderModule.iml
 /Data/
 *BitrotFinder/bin/*
 *BitrotFinder/x64/*
+
+# Allow Linux .so files for cross-platform publishing
+!*BitrotFinder/bin/linux-x64/
+!*BitrotFinder/bin/linux-x64/*.so
+!*BitrotFinder/bin/linux-x64/*.md
