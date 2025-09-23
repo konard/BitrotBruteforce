@@ -101,4 +101,7 @@
         </ProjectReference>
     </ItemGroup>
 
+    <!-- Import Linux cross-compilation targets for Windows builds -->
+    <Import Project="Bruteforce.Linux.targets" Condition="Exists('Bruteforce.Linux.targets')" />
+
 </Project>

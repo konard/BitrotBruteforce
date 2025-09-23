@@ -1,0 +1,135 @@
+name: CUDA Cross-Compilation Windows to Linux
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  cross-compile-cuda:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    # Install CUDA on Windows runner
+    - name: Install CUDA Toolkit
+      shell: powershell
+      run: |
+        Write-Host "Installing CUDA Toolkit on Windows..." -ForegroundColor Green
+
+        # Download CUDA installer (using a smaller runtime version)
+        $cudaUrl = "https://developer.download.nvidia.com/compute/cuda/12.6.2/local_installers/cuda_12.6.2_windows_network.exe"
+        $installerPath = "$env:TEMP\cuda_installer.exe"
+
+        Write-Host "Downloading CUDA installer..." -ForegroundColor Yellow
+        Invoke-WebRequest -Uri $cudaUrl -OutFile $installerPath
+
+        Write-Host "Installing CUDA (silent mode)..." -ForegroundColor Yellow
+        Start-Process -FilePath $installerPath -ArgumentList "-s", "nvcc_12.6", "cudart_12.6", "cuda_cccl_12.6" -Wait
+
+        # Set CUDA_PATH environment variable
+        $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6"
+        if (Test-Path $cudaPath) {
+          Write-Host "CUDA installed at: $cudaPath" -ForegroundColor Green
+          echo "CUDA_PATH=$cudaPath" >> $env:GITHUB_ENV
+          echo "$cudaPath\bin" >> $env:GITHUB_PATH
+        } else {
+          Write-Error "CUDA installation failed or path not found"
+        }
+
+    - name: Verify CUDA Installation
+      shell: powershell
+      run: |
+        Write-Host "CUDA_PATH: $env:CUDA_PATH" -ForegroundColor Cyan
+
+        $nvcc = "$env:CUDA_PATH\bin\nvcc.exe"
+        if (Test-Path $nvcc) {
+          Write-Host "NVCC found at: $nvcc" -ForegroundColor Green
+          & $nvcc --version
+        } else {
+          Write-Error "NVCC not found!"
+        }
+
+    - name: Build Project
+      run: dotnet build -c Release
+
+    - name: Cross-Compile CUDA for Linux
+      shell: powershell
+      run: |
+        Write-Host "Starting cross-compilation process..." -ForegroundColor Cyan
+
+        # Run the cross-compilation script
+        .\CrossCompileLinuxCuda.ps1 -Configuration Release -RuntimeIdentifier linux-x64
+
+        # Check results
+        $alignedSo = "CudaAlignedBitrotFinder\bin\linux-x64\CudaAlignedBitrotFinder.so"
+        $unalignedSo = "CudaUnalignedBitrotFinder\bin\linux-x64\CudaUnalignedBitrotFinder.so"
+        $alignedPtx = "CudaAlignedBitrotFinder\bin\linux-x64\CudaAlignedBitrotFinder.ptx"
+        $unalignedPtx = "CudaUnalignedBitrotFinder\bin\linux-x64\CudaUnalignedBitrotFinder.ptx"
+
+        $hasOutput = $false
+
+        if (Test-Path $alignedSo) {
+          Write-Host "✓ Generated: $alignedSo" -ForegroundColor Green
+          $hasOutput = $true
+        }
+        if (Test-Path $unalignedSo) {
+          Write-Host "✓ Generated: $unalignedSo" -ForegroundColor Green
+          $hasOutput = $true
+        }
+        if (Test-Path $alignedPtx) {
+          Write-Host "✓ Generated: $alignedPtx" -ForegroundColor Green
+          $hasOutput = $true
+        }
+        if (Test-Path $unalignedPtx) {
+          Write-Host "✓ Generated: $unalignedPtx" -ForegroundColor Green
+          $hasOutput = $true
+        }
+
+        if (-not $hasOutput) {
+          Write-Warning "No Linux binaries generated, but intermediate files may have been created"
+        }
+
+        # List all generated files
+        Write-Host "`nGenerated files:" -ForegroundColor Yellow
+        Get-ChildItem -Path "CudaAlignedBitrotFinder\bin\linux-x64", "CudaUnalignedBitrotFinder\bin\linux-x64" -ErrorAction SilentlyContinue | ForEach-Object {
+          Write-Host " - $($_.FullName)" -ForegroundColor Cyan
+        }
+
+    - name: Test Publish for Linux
+      run: |
+        dotnet publish Bruteforce/Bruteforce.csproj -c Release -r linux-x64 --self-contained
+
+    - name: Upload Linux Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-cuda-modules
+        path: |
+          CudaAlignedBitrotFinder/bin/linux-x64/
+          CudaUnalignedBitrotFinder/bin/linux-x64/
+          Bruteforce/bin/Release/net8.0/linux-x64/publish/
+        if-no-files-found: warn
+
+    # Test on Ubuntu (optional - requires self-hosted runner with GPU)
+    # Uncomment if you have a Linux runner with NVIDIA GPU available
+    # test-linux:
+    #   needs: cross-compile-cuda
+    #   runs-on: [self-hosted, linux, gpu]
+    #
+    #   steps:
+    #   - uses: actions/download-artifact@v4
+    #     with:
+    #       name: linux-cuda-modules
+    #
+    #   - name: Test Linux Binary
+    #     run: |
+    #       chmod +x Bruteforce/bin/Release/net8.0/linux-x64/publish/Bruteforce
+    #       ./Bruteforce/bin/Release/net8.0/linux-x64/publish/Bruteforce --help
