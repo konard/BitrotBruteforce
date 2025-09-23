@@ -1,0 +1,76 @@
+name: Test Windows to Linux Publishing
+
+on:
+  push:
+    branches: [ issue-9-231cfae8 ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  test-windows-build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Test Windows Build
+      run: |
+        cd Bruteforce
+        dotnet build -c Release
+
+    - name: Test Linux Publishing from Windows
+      run: |
+        cd Bruteforce
+        dotnet publish -r linux-x64 -c Release --self-contained
+
+    - name: Check if Linux publish worked
+      shell: pwsh
+      run: |
+        $publishPath = "Bruteforce\bin\Release\net8.0\linux-x64\publish"
+        if (Test-Path $publishPath) {
+          Write-Host "✅ Linux publish directory created successfully"
+          Get-ChildItem -Path $publishPath -Recurse | Select-Object Name, Length
+        } else {
+          Write-Host "❌ Linux publish directory not found"
+          exit 1
+        }
+
+    - name: Upload Linux artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-x64-publish
+        path: Bruteforce/bin/Release/net8.0/linux-x64/publish/
+
+  verify-linux-artifacts:
+    needs: test-windows-build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Linux artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-x64-publish
+        path: ./linux-publish
+
+    - name: Verify Linux executable
+      run: |
+        if [ -f "./linux-publish/Bruteforce" ]; then
+          echo "✅ Linux executable found"
+          file ./linux-publish/Bruteforce
+          chmod +x ./linux-publish/Bruteforce
+          echo "Executable permissions set"
+        else
+          echo "❌ Linux executable not found"
+          exit 1
+        fi
+
+    - name: Check for required libraries
+      run: |
+        echo "Checking for CUDA libraries in publish directory:"
+        find ./linux-publish -name "*.so" -o -name "*.dll" | head -20

@@ -35,9 +35,9 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
       <!-- Include placeholder if .so files not yet built -->
-      <Content Include="..\CudaAlignedBitrotFinder\bin\linux-x64\BUILD_ON_LINUX.txt"
+      <Content Include="..\CudaAlignedBitrotFinder\bin\linux-x64\README.md"
                Condition="!Exists('..\CudaAlignedBitrotFinder\bin\linux-x64\CudaAlignedBitrotFinder.so')">
-        <Link>libs\BUILD_ON_LINUX.txt</Link>
+        <Link>libs\README_LINUX_CUDA.md</Link>
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
