@@ -85,8 +85,4 @@
 
     <!-- NOTE: No ProjectReference to vcxproj files for CI builds -->
 
-    <ItemGroup>
-      <Compile Include="**\*.cs" />
-    </ItemGroup>
-
 </Project>
