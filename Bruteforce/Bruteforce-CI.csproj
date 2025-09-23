@@ -8,6 +8,8 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Configurations>Release;Debug</Configurations>
         <Platforms>x64</Platforms>
+        <AssemblyName>Bruteforce</AssemblyName>
+        <PublishSingleFile Condition="'$(RuntimeIdentifier)' == 'linux-x64'">false</PublishSingleFile>
     </PropertyGroup>
 
     <!-- Windows CUDA DLLs for Windows runtime -->
