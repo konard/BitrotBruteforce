@@ -23,7 +23,7 @@ jobs:
     # The CompileCudaToPtx.ps1 script will automatically skip when GITHUB_ACTIONS=true
 
     - name: Build Project
-      run: dotnet build -c Release
+      run: dotnet build Bruteforce/Bruteforce.csproj -c Release
 
     - name: Test PTX Compilation Script (CI Mode)
       shell: powershell
