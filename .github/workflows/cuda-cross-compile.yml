@@ -51,10 +51,9 @@ jobs:
 
         Write-Host "Mock PTX files created for CI testing" -ForegroundColor Green
         Get-ChildItem -Path "ptx" -Filter "*.ptx" | Format-Table Name, Length
-
-    # Note: Actual PTX compilation requires CUDA Toolkit
-    # In CI, we use mock PTX files created above
-    # Developers with CUDA installed will generate real PTX files locally
+        # Note: Actual PTX compilation requires CUDA Toolkit
+        # In CI, we use mock PTX files created above
+        # Developers with CUDA installed will generate real PTX files locally
 
     - name: Build Project
       run: dotnet build Bruteforce/Bruteforce.csproj -c Release
@@ -99,10 +98,9 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    # Note: CUDA runtime installation skipped in CI
-    # The executable structure and PTX files are verified without actual GPU execution
-
     - name: Verify Linux executable and PTX files
+      # Note: CUDA runtime installation skipped in CI
+      # The executable structure and PTX files are verified without actual GPU execution
       run: |
         echo "Checking Linux executable..."
         if [ -f "./linux-publish/Bruteforce" ]; then
