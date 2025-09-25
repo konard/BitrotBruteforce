@@ -17,7 +17,7 @@ Write-Host "========================================" -ForegroundColor Cyan
 if ($env:GITHUB_ACTIONS -eq "true" -or $env:CI -eq "true") {
     Write-Host "Running in CI environment - skipping PTX compilation" -ForegroundColor Yellow
     Write-Host "PTX files will be generated during local development" -ForegroundColor Yellow
-    return
+    exit 0
 }
 
 # Check if CUDA is installed
@@ -31,13 +31,13 @@ if (-not $CudaPath) {
 if (-not (Test-Path $CudaPath)) {
     Write-Warning "CUDA Toolkit not found. PTX files will not be generated."
     Write-Host "To enable CUDA cross-compilation, install CUDA Toolkit from https://developer.nvidia.com/cuda-downloads" -ForegroundColor Yellow
-    return
+    exit 0
 }
 
 $nvcc = Join-Path $CudaPath "bin\nvcc.exe"
 if (-not (Test-Path $nvcc)) {
     Write-Error "nvcc.exe not found at $nvcc"
-    return
+    exit 1
 }
 
 Write-Host "Using CUDA Toolkit at: $CudaPath" -ForegroundColor Green
@@ -64,30 +64,6 @@ if ($Configuration -eq "Release") {
     $compileArgs += "-G", "-g"  # Debug symbols
 }
 
-# Function to compile a CUDA file to PTX
-function Compile-CudaToPtx {
-    param(
-        [string]$SourceFile,
-        [string]$OutputFile
-    )
-
-    $args = $compileArgs + @(
-        "-o", $OutputFile,
-        $SourceFile
-    )
-
-    Write-Host "Compiling $SourceFile to PTX..." -ForegroundColor Yellow
-    $process = Start-Process -FilePath $nvcc -ArgumentList $args -NoNewWindow -Wait -PassThru
-
-    if ($process.ExitCode -eq 0) {
-        Write-Host "✓ Successfully compiled to $OutputFile" -ForegroundColor Green
-        return $true
-    } else {
-        Write-Host "✗ Failed to compile $SourceFile" -ForegroundColor Red
-        return $false
-    }
-}
-
 # Compile CudaAlignedBitrotFinder
 Write-Host "`nCompiling CudaAlignedBitrotFinder..." -ForegroundColor Cyan
 $alignedSources = @(
@@ -98,7 +74,19 @@ $alignedSources = @(
 $alignedSuccess = $true
 foreach ($source in $alignedSources) {
     $outputFile = Join-Path $outputDir ([System.IO.Path]::GetFileNameWithoutExtension($source) + "_aligned.ptx")
-    if (-not (Compile-CudaToPtx -SourceFile $source -OutputFile $outputFile)) {
+
+    $args = $compileArgs + @(
+        "-o", $outputFile,
+        $source
+    )
+
+    Write-Host "Compiling $source to PTX..." -ForegroundColor Yellow
+    $process = Start-Process -FilePath $nvcc -ArgumentList $args -NoNewWindow -Wait -PassThru
+
+    if ($process.ExitCode -eq 0) {
+        Write-Host "✓ Successfully compiled to $outputFile" -ForegroundColor Green
+    } else {
+        Write-Host "✗ Failed to compile $source" -ForegroundColor Red
         $alignedSuccess = $false
     }
 }
@@ -113,7 +101,19 @@ $unalignedSources = @(
 $unalignedSuccess = $true
 foreach ($source in $unalignedSources) {
     $outputFile = Join-Path $outputDir ([System.IO.Path]::GetFileNameWithoutExtension($source) + "_unaligned.ptx")
-    if (-not (Compile-CudaToPtx -SourceFile $source -OutputFile $outputFile)) {
+
+    $args = $compileArgs + @(
+        "-o", $outputFile,
+        $source
+    )
+
+    Write-Host "Compiling $source to PTX..." -ForegroundColor Yellow
+    $process = Start-Process -FilePath $nvcc -ArgumentList $args -NoNewWindow -Wait -PassThru
+
+    if ($process.ExitCode -eq 0) {
+        Write-Host "✓ Successfully compiled to $outputFile" -ForegroundColor Green
+    } else {
+        Write-Host "✗ Failed to compile $source" -ForegroundColor Red
         $unalignedSuccess = $false
     }
 }
@@ -124,7 +124,8 @@ if ($alignedSuccess -and $unalignedSuccess) {
     Write-Host "✓ All PTX files generated successfully!" -ForegroundColor Green
     Write-Host "PTX files are located in: .\$outputDir\" -ForegroundColor Green
     Write-Host "These PTX files can be used on any platform with CUDA support." -ForegroundColor Green
+    exit 0
 } else {
     Write-Host "✗ Some compilations failed. Check the errors above." -ForegroundColor Red
-    throw "PTX compilation failed"
+    exit 1
 }
