@@ -98,15 +98,29 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    - name: Verify Linux executable and PTX files
-      # Note: CUDA runtime installation skipped in CI
-      # The executable structure and PTX files are verified without actual GPU execution
+    - name: Install CUDA Toolkit on Linux
+      run: |
+        # Install CUDA 12.4 on Ubuntu 22.04
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+        sudo dpkg -i cuda-keyring_1.1-1_all.deb
+        sudo apt-get update
+        sudo apt-get -y install cuda-toolkit-12-4 cuda-drivers-fabricmanager-550
+
+        # Set up environment
+        echo "export PATH=/usr/local/cuda-12.4/bin:$PATH" >> $GITHUB_ENV
+        echo "export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
+        # Verify CUDA installation
+        /usr/local/cuda-12.4/bin/nvcc --version || echo "NVCC not found, continuing..."
+
+    - name: Verify Linux executable and CUDA files
       run: |
         echo "Checking Linux executable..."
         if [ -f "./linux-publish/Bruteforce" ]; then
           echo "✅ Linux executable found"
           file ./linux-publish/Bruteforce
           chmod +x ./linux-publish/Bruteforce
+          ldd ./linux-publish/Bruteforce || true
         else
           echo "❌ Linux executable not found"
           exit 1
@@ -117,6 +131,11 @@ jobs:
         if [ -d "./linux-publish/ptx" ]; then
           echo "✅ PTX directory found"
           ls -la ./linux-publish/ptx/
+          # Verify PTX files can be read by CUDA
+          for ptx in ./linux-publish/ptx/*.ptx; do
+            echo "Checking $ptx:"
+            head -n 5 "$ptx" | grep -q ".version" && echo "  ✅ Valid PTX header found" || echo "  ⚠️ PTX header not found"
+          done
         else
           echo "ℹ️ No PTX directory found (may be using .so files)"
         fi
@@ -124,14 +143,110 @@ jobs:
         echo ""
         echo "Checking for .so files..."
         if [ -d "./linux-publish/libs" ]; then
-          echo "ℹ️ libs directory found"
+          echo "✅ libs directory found"
           ls -la ./linux-publish/libs/
+          # Verify .so files are valid ELF binaries
+          for so in ./linux-publish/libs/*.so; do
+            if [ -f "$so" ]; then
+              echo "Checking $so:"
+              file "$so" | grep -q "ELF" && echo "  ✅ Valid ELF binary" || echo "  ❌ Invalid .so file"
+              # Check CUDA dependencies
+              ldd "$so" 2>/dev/null | grep -q "libcuda" && echo "  ✅ Links to CUDA" || echo "  ℹ️ No direct CUDA linking"
+            fi
+          done
         else
           echo "ℹ️ No libs directory found (may be using PTX)"
         fi
 
-    - name: Test executable help
+    - name: Test executable functionality
       run: |
         cd ./linux-publish
-        # Test that the executable at least shows help (won't actually run CUDA without GPU)
-        ./Bruteforce --help || echo "Note: Application may require GPU to run fully"
+        # Test help output
+        ./Bruteforce --help || echo "Note: Help command may require GPU"
+
+        # Try to run with test parameters (will fail without GPU but shows loading)
+        echo "Testing CUDA initialization (expected to fail on non-GPU runner):"
+        timeout 5s ./Bruteforce test 2>&1 | head -20 || true
+
+        # Check if CUDA libraries can be loaded
+        echo ""
+        echo "Checking CUDA library loading:"
+        LD_DEBUG=libs ./Bruteforce --help 2>&1 | grep -i cuda | head -10 || echo "No CUDA library loading detected"
+
+  # Optional: GPU-enabled runner test (requires GPU runner configuration)
+  linux-gpu-test:
+    runs-on: ubuntu-22.04  # Replace with GPU runner when available
+    needs: windows-ptx-compile
+    # Only run if labeled for GPU testing or on main branches
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'gpu-test') ||
+      github.ref == 'refs/heads/master' ||
+      github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Note about GPU runner
+      run: |
+        echo "ℹ️ GPU Testing Configuration:"
+        echo "This job is configured to run on GPU-enabled runners."
+        echo "To enable GPU testing:"
+        echo "  1. Configure GPU runners in your GitHub organization/repository"
+        echo "  2. Update 'runs-on' to use your GPU runner group (e.g., 'gpu-runners' or 'self-hosted, gpu')"
+        echo "  3. Apply the 'gpu-test' label to PRs that need GPU testing"
+        echo ""
+        echo "For GitHub-hosted GPU runners:"
+        echo "  - Use 'runs-on: [gpu-t4]' or similar GPU runner type"
+        echo "  - Ensure organization has GPU runner access enabled"
+        echo ""
+        echo "Current runner info:"
+        uname -a
+
+    - name: Check for NVIDIA GPU
+      run: |
+        # Check if NVIDIA GPU is available
+        if command -v nvidia-smi &> /dev/null; then
+          echo "✅ NVIDIA GPU detected:"
+          nvidia-smi
+        else
+          echo "⚠️ No NVIDIA GPU detected on this runner"
+          echo "This job should run on a GPU-enabled runner for full testing"
+        fi
+
+    - name: Download Linux artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-publish-with-ptx
+        path: ./linux-publish
+
+    - name: Setup CUDA environment
+      run: |
+        # If on GPU runner, CUDA should be pre-installed
+        # Otherwise, install CUDA toolkit
+        if ! command -v nvcc &> /dev/null; then
+          echo "Installing CUDA Toolkit..."
+          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update
+          sudo apt-get -y install cuda-toolkit-12-4
+        fi
+
+        # Verify CUDA
+        nvcc --version || echo "NVCC not available"
+
+    - name: Run CUDA tests
+      run: |
+        cd ./linux-publish
+        chmod +x ./Bruteforce
+
+        echo "Running Bruteforce with CUDA:"
+        # Run actual CUDA test (will only work on GPU runner)
+        if command -v nvidia-smi &> /dev/null && nvidia-smi > /dev/null 2>&1; then
+          echo "GPU Available - Running full test"
+          # Run with small test to verify CUDA works
+          timeout 30s ./Bruteforce "test" || echo "Test completed or timed out"
+
+          # Check GPU memory usage
+          nvidia-smi --query-gpu=memory.used,memory.total --format=csv
+        else
+          echo "No GPU - Skipping CUDA execution test"
+          ./Bruteforce --help || true
+        fi

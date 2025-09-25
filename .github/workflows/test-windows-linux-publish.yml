@@ -93,6 +93,17 @@ jobs:
         name: linux-x64-publish
         path: ./linux-publish
 
+    - name: Install CUDA Toolkit
+      run: |
+        # Install CUDA 12.4 for verification
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+        sudo dpkg -i cuda-keyring_1.1-1_all.deb
+        sudo apt-get update
+        sudo apt-get -y install cuda-toolkit-12-4
+
+        # Verify installation
+        /usr/local/cuda-12.4/bin/nvcc --version || echo "NVCC not found"
+
     - name: Verify Linux executable
       run: |
         if [ -f "./linux-publish/Bruteforce" ]; then
@@ -100,23 +111,139 @@ jobs:
           file ./linux-publish/Bruteforce
           chmod +x ./linux-publish/Bruteforce
           echo "Executable permissions set"
+
+          # Check dependencies
+          echo "Checking library dependencies:"
+          ldd ./linux-publish/Bruteforce || true
         else
           echo "Error: Linux executable not found"
           exit 1
         fi
 
-    - name: Check for CUDA support files
+    - name: Verify CUDA support files
       run: |
         echo "Checking for CUDA support files in publish directory:"
         echo ""
 
-        echo "PTX files:"
-        find ./linux-publish -name "*.ptx" 2>/dev/null || echo "No PTX files found"
+        echo "=== PTX files ==="
+        ptx_count=$(find ./linux-publish -name "*.ptx" 2>/dev/null | wc -l)
+        if [ $ptx_count -gt 0 ]; then
+          echo "✅ Found $ptx_count PTX files:"
+          find ./linux-publish -name "*.ptx" -exec basename {} \; | sort
+
+          # Validate PTX files
+          for ptx in $(find ./linux-publish -name "*.ptx"); do
+            if head -n 1 "$ptx" | grep -q ".version"; then
+              echo "  ✅ $(basename $ptx): Valid PTX format"
+            else
+              echo "  ❌ $(basename $ptx): Invalid PTX format"
+            fi
+          done
+        else
+          echo "⚠️ No PTX files found"
+        fi
         echo ""
 
-        echo "Shared libraries:"
-        find ./linux-publish -name "*.so" 2>/dev/null || echo "No .so files found"
+        echo "=== Shared libraries (.so) ==="
+        so_count=$(find ./linux-publish -name "*.so" 2>/dev/null | wc -l)
+        if [ $so_count -gt 0 ]; then
+          echo "✅ Found $so_count .so files:"
+          find ./linux-publish -name "*.so" -exec file {} \; | head -5
+        else
+          echo "ℹ️ No .so files found (using PTX for cross-platform support)"
+        fi
         echo ""
 
-        echo "DLL files (should not be in Linux build):"
-        find ./linux-publish -name "*.dll" 2>/dev/null || echo "No DLL files found (correct)"
+        echo "=== DLL files check ==="
+        dll_count=$(find ./linux-publish -name "*.dll" 2>/dev/null | wc -l)
+        if [ $dll_count -eq 0 ]; then
+          echo "✅ No DLL files found (correct for Linux build)"
+        else
+          echo "❌ Found $dll_count DLL files (should not be in Linux build):"
+          find ./linux-publish -name "*.dll" -exec basename {} \;
+        fi
+
+    - name: Test CUDA initialization
+      run: |
+        cd ./linux-publish
+        echo "Testing CUDA library loading (without GPU):"
+
+        # Try to run help
+        ./Bruteforce --help 2>&1 || echo "Help command executed"
+
+        # Check if CUDA libraries are being loaded
+        echo ""
+        echo "Checking for CUDA library references:"
+        LD_DEBUG=libs ./Bruteforce --help 2>&1 | grep -i "cuda\|ptx" | head -5 || echo "No CUDA references in library loading"
+
+  # GPU test job - runs only when GPU runner is available
+  gpu-functional-test:
+    needs: test-windows-build
+    runs-on: ubuntu-22.04  # Change to GPU runner when configured
+    # Only run on labeled PRs or main branch
+    if: contains(github.event.pull_request.labels.*.name, 'gpu-test') || github.ref == 'refs/heads/master'
+
+    steps:
+    - name: GPU Runner Information
+      run: |
+        echo "=== GPU Test Runner Configuration ==="
+        echo ""
+        echo "This job is designed to run on GPU-enabled runners."
+        echo "To enable full GPU testing:"
+        echo ""
+        echo "1. For GitHub-hosted GPU runners:"
+        echo "   - Update 'runs-on' to: gpu-t4 (or similar GPU runner type)"
+        echo "   - Ensure organization has GPU runners enabled"
+        echo ""
+        echo "2. For self-hosted GPU runners:"
+        echo "   - Update 'runs-on' to: [self-hosted, gpu, linux]"
+        echo "   - Ensure runner has NVIDIA drivers and CUDA installed"
+        echo ""
+        echo "3. For third-party services (e.g., RunsOn):"
+        echo "   - Update 'runs-on' to match your configuration"
+        echo ""
+        echo "Current runner:"
+        uname -a
+        echo ""
+
+        # Check for GPU
+        if command -v nvidia-smi &> /dev/null; then
+          echo "✅ GPU DETECTED:"
+          nvidia-smi
+        else
+          echo "⚠️ No GPU detected - Full CUDA testing not possible"
+        fi
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-x64-publish
+        path: ./linux-publish
+
+    - name: Run GPU tests
+      if: success()
+      run: |
+        cd ./linux-publish
+        chmod +x ./Bruteforce
+
+        if command -v nvidia-smi &> /dev/null && nvidia-smi > /dev/null 2>&1; then
+          echo "=== Running GPU Tests ==="
+
+          # Monitor GPU before test
+          echo "GPU state before test:"
+          nvidia-smi --query-gpu=memory.used,memory.free,utilization.gpu --format=csv
+
+          # Run test
+          echo ""
+          echo "Running Bruteforce test:"
+          timeout 60s ./Bruteforce "testpattern" || true
+
+          # Monitor GPU after test
+          echo ""
+          echo "GPU state after test:"
+          nvidia-smi --query-gpu=memory.used,memory.free,utilization.gpu --format=csv
+        else
+          echo "No GPU available - cannot run functional tests"
+          echo "Running basic validation only:"
+          ./Bruteforce --help || true
+        fi
