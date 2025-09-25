@@ -46,3 +46,6 @@ target_compile_options(CudaUnalignedBitrotFinder
         /W3
 )
 
+set(CMAKE_CUDA_ARCHITECTURES "52")
+
+
