@@ -175,17 +175,9 @@ class Worker
         int bitIndex;
         
         if (useGpu)
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Console.WriteLine("YOUR LINUX IS MADE FOR SUFFERING, NOT FOR SPEED");
-                Console.WriteLine("THE GPU ACCELERATION FUNCTION IS NOT AVAILABLE BECAUSE FUCK YOU WITH YOUR FUCKING LINUX");
-                Console.WriteLine("!!!!!");
-                bitIndex = BruteforceParallel.Bruteforce(piece.Bytes, piece.Hash.ToByteArrayFromHex(), countOfThreads);
-            }
-            else
-            {
-                bitIndex = BruteforceCuda.Bruteforce(piece.Bytes, piece.Hash.ToByteArrayFromHex());
-            }
+        {
+            bitIndex = BruteforceCuda.Bruteforce(piece.Bytes, piece.Hash.ToByteArrayFromHex());
+        }
         else
         {
             Console.WriteLine("YOU REALLY WANT TO NOT USE GPU?!!");
@@ -246,18 +238,7 @@ class Worker
         
         if (useGpu)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Console.WriteLine("YOUR LINUX IS MADE FOR SUFFERING, NOT FOR SPEED");
-                Console.WriteLine("THE GPU ACCELERATION FUNCTION IS NOT AVAILABLE BECAUSE FUCK YOU WITH YOUR FUCKING LINUX");
-                Console.WriteLine("!!!!!");
-                bitIndex = BruteforceParallel.Bruteforce(data, pieceHash.ToByteArrayFromHex(), countOfThreads);
-            }
-            else
-            {
-                bitIndex = BruteforceCuda.Bruteforce(data, pieceHash.ToByteArrayFromHex());
-            }
-
+            bitIndex = BruteforceCuda.Bruteforce(data, pieceHash.ToByteArrayFromHex());
         }
         else
         {

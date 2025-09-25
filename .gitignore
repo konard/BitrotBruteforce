@@ -8,3 +8,6 @@ riderModule.iml
 /Data/
 *BitrotFinder/bin/*
 *BitrotFinder/x64/*
+
+/Bruteforce/libs/CudaAlignedBitrotFinder.so
+/Bruteforce/libs/CudaUnalignedBitrotFinder.so

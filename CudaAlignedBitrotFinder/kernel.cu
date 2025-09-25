@@ -7,17 +7,27 @@
 #include <stdexcept>
 #include <iostream>
 #include <fstream>
+#include <cstring>
 
 #include "sha1.cuh"
 
+#ifdef LINUX
+    #define API_EXPORT __attribute__((visibility("default")))
+#else
+    #define API_EXPORT __declspec(dllexport)
+#endif
+
 extern "C" {
-    void __declspec(dllexport) bruteforceBits(unsigned char* pieceData, unsigned char* pieceHash, size_t pieceSize, unsigned int* result)
+    void API_EXPORT bruteforceBits(unsigned char* pieceData, unsigned char* pieceHash, size_t pieceSize, unsigned int* result)
     {
         unsigned char* dev_pieceData = 0;
         unsigned char* dev_pieceHash = 0;
         SHA1_CTX* dev_midstates = 0;
         unsigned int* dev_result = 0;
         cudaError_t cudaStatus;
+
+        int threadsPerBlock = 1024;
+        int blocksPerGrid = ((pieceSize / BATCH_SIZE) + threadsPerBlock - 1) / threadsPerBlock;
 
         size_t midstatesLength = pieceSize / CHUNK_SIZE;
         SHA1_CTX* midstates = new SHA1_CTX[midstatesLength + 1];
@@ -88,8 +98,6 @@ extern "C" {
             goto Error;
         }
 
-        int threadsPerBlock = 1024;
-        int blocksPerGrid = ((pieceSize / BATCH_SIZE) + threadsPerBlock - 1) / threadsPerBlock;
         bitFlipKernel << <blocksPerGrid, threadsPerBlock >> > (dev_pieceData, dev_pieceHash, dev_midstates, pieceSize, dev_result);
 
         cudaStatus = cudaGetLastError();
