@@ -40,7 +40,15 @@
       </Content>
       <None Remove="libs\libcrypto-3-x64_cl.so" />
       <Content Include="libs\libcrypto-3-x64_cl.so">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <None Remove="libs\CudaAlignedBitrotFinder.so" />
+      <Content Include="libs\CudaAlignedBitrotFinder.so">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <None Remove="libs\CudaUnalignedBitrotFinder.so" />
+      <Content Include="libs\CudaUnalignedBitrotFinder.so">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
 
@@ -78,4 +86,9 @@
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </ProjectReference>
     </ItemGroup>
+
+    <Target Name="PreBuildCUDALibraries" BeforeTargets="PreBuildEvent" Condition="'$(Configuration)' == 'Release'">
+        <Exec Command="powershell -ExecutionPolicy Bypass -File $(ProjectDir)buildCuda.ps1" IgnoreExitCode="false" />
+    </Target>
+
 </Project>
