@@ -67,24 +67,16 @@ jobs:
         Write-Host "Starting cross-compilation process..." -ForegroundColor Cyan
 
         # Run the cross-compilation script
-        .\CrossCompileLinuxCuda.ps1 -Configuration Release -RuntimeIdentifier linux-x64
+        .\CompileCudaToPtx.ps1 -Configuration Release
 
         # Check results
-        $alignedSo = "CudaAlignedBitrotFinder\bin\linux-x64\CudaAlignedBitrotFinder.so"
-        $unalignedSo = "CudaUnalignedBitrotFinder\bin\linux-x64\CudaUnalignedBitrotFinder.so"
-        $alignedPtx = "CudaAlignedBitrotFinder\bin\linux-x64\CudaAlignedBitrotFinder.ptx"
-        $unalignedPtx = "CudaUnalignedBitrotFinder\bin\linux-x64\CudaUnalignedBitrotFinder.ptx"
+        $alignedPtx = "ptx\kernel_aligned.ptx"
+        $unalignedPtx = "ptx\kernel_unaligned.ptx"
+        $alignedSha1Ptx = "ptx\sha1_aligned.ptx"
+        $unalignedSha1Ptx = "ptx\sha1_unaligned.ptx"
 
         $hasOutput = $false
 
-        if (Test-Path $alignedSo) {
-          Write-Host "✓ Generated: $alignedSo" -ForegroundColor Green
-          $hasOutput = $true
-        }
-        if (Test-Path $unalignedSo) {
-          Write-Host "✓ Generated: $unalignedSo" -ForegroundColor Green
-          $hasOutput = $true
-        }
         if (Test-Path $alignedPtx) {
           Write-Host "✓ Generated: $alignedPtx" -ForegroundColor Green
           $hasOutput = $true
@@ -93,14 +85,22 @@ jobs:
           Write-Host "✓ Generated: $unalignedPtx" -ForegroundColor Green
           $hasOutput = $true
         }
+        if (Test-Path $alignedSha1Ptx) {
+          Write-Host "✓ Generated: $alignedSha1Ptx" -ForegroundColor Green
+          $hasOutput = $true
+        }
+        if (Test-Path $unalignedSha1Ptx) {
+          Write-Host "✓ Generated: $unalignedSha1Ptx" -ForegroundColor Green
+          $hasOutput = $true
+        }
 
         if (-not $hasOutput) {
-          Write-Warning "No Linux binaries generated, but intermediate files may have been created"
+          Write-Warning "No PTX files generated, check compilation errors above"
         }
 
         # List all generated files
         Write-Host "`nGenerated files:" -ForegroundColor Yellow
-        Get-ChildItem -Path "CudaAlignedBitrotFinder\bin\linux-x64", "CudaUnalignedBitrotFinder\bin\linux-x64" -ErrorAction SilentlyContinue | ForEach-Object {
+        Get-ChildItem -Path "ptx" -ErrorAction SilentlyContinue | ForEach-Object {
           Write-Host " - $($_.FullName)" -ForegroundColor Cyan
         }
 
@@ -113,8 +113,7 @@ jobs:
       with:
         name: linux-cuda-modules
         path: |
-          CudaAlignedBitrotFinder/bin/linux-x64/
-          CudaUnalignedBitrotFinder/bin/linux-x64/
+          ptx/
           Bruteforce/bin/Release/net8.0/linux-x64/publish/
         if-no-files-found: warn
 
