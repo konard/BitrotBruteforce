@@ -10,34 +10,13 @@
         <Platforms>x64</Platforms>
     </PropertyGroup>
 
-    <!-- Windows CUDA DLLs for Windows runtime -->
-    <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' or ('$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT')">
+    <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
       <Content Include="..\CudaAlignedBitrotFinder\bin\x64\Release\CudaAlignedBitrotFinder.dll">
         <Link>libs\CudaAlignedBitrotFinder.dll</Link>
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
       <Content Include="..\CudaUnalignedBitrotFinder\bin\x64\Release\CudaUnalignedBitrotFinder.dll">
         <Link>libs\CudaUnalignedBitrotFinder.dll</Link>
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
-    </ItemGroup>
-
-    <!-- Linux CUDA Shared Objects for Linux runtime -->
-    <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
-      <Content Include="..\CudaAlignedBitrotFinder\bin\linux-x64\CudaAlignedBitrotFinder.so"
-               Condition="Exists('..\CudaAlignedBitrotFinder\bin\linux-x64\CudaAlignedBitrotFinder.so')">
-        <Link>libs\CudaAlignedBitrotFinder.so</Link>
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
-      <Content Include="..\CudaUnalignedBitrotFinder\bin\linux-x64\CudaUnalignedBitrotFinder.so"
-               Condition="Exists('..\CudaUnalignedBitrotFinder\bin\linux-x64\CudaUnalignedBitrotFinder.so')">
-        <Link>libs\CudaUnalignedBitrotFinder.so</Link>
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
-      <!-- Include placeholder if .so files not yet built -->
-      <Content Include="..\CudaAlignedBitrotFinder\bin\linux-x64\README.md"
-               Condition="!Exists('..\CudaAlignedBitrotFinder\bin\linux-x64\CudaAlignedBitrotFinder.so')">
-        <Link>libs\README_LINUX_CUDA.md</Link>
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
@@ -81,8 +60,7 @@
       <None Remove="Properties\launchSettings.json" />
     </ItemGroup>
     
-    <!-- Windows Project References for Windows build -->
-    <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' or ('$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT')">
+    <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
         <ProjectReference Include="..\CudaAlignedBitrotFinder/CudaAlignedBitrotFinder.vcxproj">
             <Project>{689208EA-24A1-48C5-9ACE-202640267B40}</Project>
             <Name>CudaAlignedBitrotFinder</Name>
@@ -101,7 +79,17 @@
         </ProjectReference>
     </ItemGroup>
 
-    <!-- Import Linux cross-compilation targets for Windows builds -->
-    <Import Project="Bruteforce.Linux.targets" Condition="Exists('Bruteforce.Linux.targets')" />
+    <!-- Cross-compile CUDA to PTX when publishing for Linux from Windows -->
+    <Target Name="CompileCudaToPtx" BeforeTargets="PrepareForPublish" Condition="'$(RuntimeIdentifier)' == 'linux-x64' and '$(OS)' == 'Windows_NT'">
+        <Message Importance="high" Text="Compiling CUDA code to PTX for Linux deployment..." />
+        <Exec Command="powershell.exe -ExecutionPolicy Bypass -File ..\CompileCudaToPtx.ps1" WorkingDirectory="$(MSBuildProjectDirectory)\.." />
+    </Target>
 
+    <!-- Include PTX files for Linux deployment -->
+    <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
+        <Content Include="..\ptx\*.ptx" Condition="Exists('..\ptx')">
+            <Link>ptx\%(Filename)%(Extension)</Link>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
 </Project>

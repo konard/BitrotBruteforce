@@ -82,3 +82,7 @@ Arguments:
   <data>         Путь к данным
   <destination>  Путь к папке с частями
 ```
+
+## Кросс-компиляция под Linux с Windows
+
+См. [WINDOWS_LINUX_CUDA_BUILD.md](WINDOWS_LINUX_CUDA_BUILD.md) для инструкций по публикации для Linux из Windows.
