@@ -10,7 +10,7 @@
         <Platforms>x64</Platforms>
     </PropertyGroup>
 
-    <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <ItemGroup Condition="'$(OS)' == 'Windows_NT' and Exists('..\CudaAlignedBitrotFinder\bin\x64\Release\CudaAlignedBitrotFinder.dll')">
       <Content Include="..\CudaAlignedBitrotFinder\bin\x64\Release\CudaAlignedBitrotFinder.dll">
         <Link>libs\CudaAlignedBitrotFinder.dll</Link>
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -60,7 +60,7 @@
       <None Remove="Properties\launchSettings.json" />
     </ItemGroup>
     
-    <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <ItemGroup Condition="'$(OS)' == 'Windows_NT' and '$(GITHUB_ACTIONS)' != 'true'">
         <ProjectReference Include="..\CudaAlignedBitrotFinder/CudaAlignedBitrotFinder.vcxproj">
             <Project>{689208EA-24A1-48C5-9ACE-202640267B40}</Project>
             <Name>CudaAlignedBitrotFinder</Name>
