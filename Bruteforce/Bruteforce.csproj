@@ -83,7 +83,7 @@
     <Target Name="CompileCudaForLinux" BeforeTargets="PrepareForPublish" Condition="'$(RuntimeIdentifier)' == 'linux-x64' and '$(OS)' == 'Windows_NT'">
         <Message Importance="high" Text="Preparing CUDA modules for Linux deployment..." />
         <!-- Use pre-built .so files if available, otherwise compile PTX -->
-        <Exec Command="powershell.exe -ExecutionPolicy Bypass -File ..\CompileCudaToPtx.ps1"
+        <Exec Command="powershell.exe -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\CompileCudaToPtx.ps1&quot;"
               WorkingDirectory="$(MSBuildProjectDirectory)\.."
               Condition="!Exists('$(MSBuildProjectDirectory)\libs\CudaAlignedBitrotFinder.so') and !Exists('$(MSBuildProjectDirectory)\..\ptx\kernel_aligned.ptx')" />
         <Message Importance="high" Text="Using pre-built Linux .so files"

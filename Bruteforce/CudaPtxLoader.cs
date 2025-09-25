@@ -60,17 +60,26 @@ public static class CudaPtxLoader
         try
         {
             // Try to initialize CUDA
-            if (CuInit(0) != 0)
+            int initResult = CuInit(0);
+            if (initResult != 0)
+            {
+                Console.WriteLine($"CUDA initialization failed with code: {initResult}");
                 return false;
+            }
 
             int device;
-            if (CuDeviceGet(out device, 0) != 0)
+            int deviceResult = CuDeviceGet(out device, 0);
+            if (deviceResult != 0)
+            {
+                Console.WriteLine($"CUDA device get failed with code: {deviceResult}");
                 return false;
+            }
 
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"CUDA check failed with exception: {ex.Message}");
             return false;
         }
     }
@@ -106,8 +115,10 @@ public static class CudaPtxLoader
     {
         // Load aligned PTX
         string alignedPtxPath = Path.Combine("ptx", "kernel_aligned.ptx");
+        Console.WriteLine($"Looking for aligned PTX at: {Path.GetFullPath(alignedPtxPath)}");
         if (File.Exists(alignedPtxPath))
         {
+            Console.WriteLine($"Loading aligned PTX file (size: {new FileInfo(alignedPtxPath).Length} bytes)...");
             byte[] ptxData = File.ReadAllBytes(alignedPtxPath);
             int result = CuModuleLoadData(out _moduleAligned, ptxData);
             if (result != 0)
@@ -117,12 +128,19 @@ public static class CudaPtxLoader
             result = CuModuleGetFunction(out _funcAligned, _moduleAligned, "bruteforceBits");
             if (result != 0)
                 throw new Exception($"Failed to get aligned function: {result}");
+            Console.WriteLine("Aligned PTX module loaded successfully");
+        }
+        else
+        {
+            Console.WriteLine($"Warning: Aligned PTX file not found at {alignedPtxPath}");
         }
 
         // Load unaligned PTX
         string unalignedPtxPath = Path.Combine("ptx", "kernel_unaligned.ptx");
+        Console.WriteLine($"Looking for unaligned PTX at: {Path.GetFullPath(unalignedPtxPath)}");
         if (File.Exists(unalignedPtxPath))
         {
+            Console.WriteLine($"Loading unaligned PTX file (size: {new FileInfo(unalignedPtxPath).Length} bytes)...");
             byte[] ptxData = File.ReadAllBytes(unalignedPtxPath);
             int result = CuModuleLoadData(out _moduleUnaligned, ptxData);
             if (result != 0)
@@ -132,6 +150,11 @@ public static class CudaPtxLoader
             result = CuModuleGetFunction(out _funcUnaligned, _moduleUnaligned, "bruteforceBits");
             if (result != 0)
                 throw new Exception($"Failed to get unaligned function: {result}");
+            Console.WriteLine("Unaligned PTX module loaded successfully");
+        }
+        else
+        {
+            Console.WriteLine($"Warning: Unaligned PTX file not found at {unalignedPtxPath}");
         }
     }
 

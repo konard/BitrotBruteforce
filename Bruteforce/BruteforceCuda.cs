@@ -18,14 +18,38 @@ public partial class BruteforceCuda
         // On Linux, check if we need to use PTX (only if .so files don't exist)
         if (_isLinux)
         {
+            Console.WriteLine("Initializing CUDA support on Linux...");
+
             // First check if native .so files exist
-            bool hasSoFiles = System.IO.File.Exists("libs/CudaAlignedBitrotFinder.so") ||
-                              System.IO.File.Exists("libs/CudaUnalignedBitrotFinder.so");
+            bool alignedSoExists = System.IO.File.Exists("libs/CudaAlignedBitrotFinder.so");
+            bool unalignedSoExists = System.IO.File.Exists("libs/CudaUnalignedBitrotFinder.so");
+            bool hasSoFiles = alignedSoExists || unalignedSoExists;
+
+            Console.WriteLine($"Aligned .so exists: {alignedSoExists}");
+            Console.WriteLine($"Unaligned .so exists: {unalignedSoExists}");
+
+            bool alignedPtxExists = System.IO.File.Exists("ptx/kernel_aligned.ptx");
+            bool unalignedPtxExists = System.IO.File.Exists("ptx/kernel_unaligned.ptx");
+            Console.WriteLine($"Aligned PTX exists: {alignedPtxExists}");
+            Console.WriteLine($"Unaligned PTX exists: {unalignedPtxExists}");
 
             // Use PTX only if .so files don't exist and PTX files are available
-            _usePtx = !hasSoFiles &&
-                      System.IO.File.Exists("ptx/kernel_aligned.ptx") &&
-                      CudaPtxLoader.IsSupported();
+            if (!hasSoFiles && alignedPtxExists)
+            {
+                Console.WriteLine("No .so files found, checking PTX support...");
+                _usePtx = CudaPtxLoader.IsSupported();
+                Console.WriteLine($"PTX mode enabled: {_usePtx}");
+            }
+            else if (hasSoFiles)
+            {
+                Console.WriteLine("Using native .so files");
+                _usePtx = false;
+            }
+            else
+            {
+                Console.WriteLine("Warning: Neither .so files nor PTX files found!");
+                _usePtx = false;
+            }
         }
     }
 
@@ -36,21 +60,35 @@ public partial class BruteforceCuda
 
         var result = uint.MaxValue;
 
-        if (_usePtx)
+        try
         {
-            // Use PTX loader on Linux (fallback when no .so files)
-            if(data.Length % 64 == 0)
-                CudaPtxLoader.BruteforceBitsAligned(data, hash, data.Length, ref result);
+            if (_usePtx)
+            {
+                // Use PTX loader on Linux (fallback when no .so files)
+                if(data.Length % 64 == 0)
+                    CudaPtxLoader.BruteforceBitsAligned(data, hash, data.Length, ref result);
+                else
+                    CudaPtxLoader.BruteforceBitsUnaligned(data, hash, data.Length, ref result);
+            }
             else
-                CudaPtxLoader.BruteforceBitsUnaligned(data, hash, data.Length, ref result);
+            {
+                // Use native libraries (DLLs on Windows, .so on Linux)
+                if(data.Length % 64 == 0)
+                    BruteforceAligned.bruteforceBits(data, hash, data.Length, ref result);
+                else
+                    BruteforceUnaligned.bruteforceBits(data, hash, data.Length, ref result);
+            }
         }
-        else
+        catch (DllNotFoundException ex)
         {
-            // Use native libraries (DLLs on Windows, .so on Linux)
-            if(data.Length % 64 == 0)
-                BruteforceAligned.bruteforceBits(data, hash, data.Length, ref result);
+            if (_isLinux)
+                throw new Exception($"CUDA libraries not found on Linux. Ensure PTX files are present or .so files are available. Error: {ex.Message}", ex);
             else
-                BruteforceUnaligned.bruteforceBits(data, hash, data.Length, ref result);
+                throw new Exception($"CUDA libraries not found. Ensure CUDA is installed. Error: {ex.Message}", ex);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"CUDA processing failed: {ex.Message}", ex);
         }
 
         if (result == uint.MaxValue)

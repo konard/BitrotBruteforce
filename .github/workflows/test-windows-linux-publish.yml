@@ -27,6 +27,21 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
+    - name: Generate PTX files for cross-platform deployment
+      shell: pwsh
+      run: |
+        Write-Host "Generating PTX files..." -ForegroundColor Cyan
+        & .\CompileCudaToPtx.ps1 -Configuration Release
+        if ($LASTEXITCODE -ne 0 -and (Test-Path "ptx")) {
+          Write-Host "PTX generation completed with warnings, continuing..." -ForegroundColor Yellow
+        }
+        if (Test-Path "ptx") {
+          Write-Host "PTX files generated:" -ForegroundColor Green
+          Get-ChildItem -Path "ptx" -Filter "*.ptx" | Format-Table Name, Length
+        } else {
+          Write-Host "Warning: PTX directory not created" -ForegroundColor Yellow
+        }
+
     - name: Test Windows Build (without vcxproj dependencies)
       run: |
         cd Bruteforce

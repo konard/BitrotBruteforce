@@ -175,20 +175,22 @@ class Worker
         int bitIndex;
         
         if (useGpu)
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Console.WriteLine("YOUR LINUX IS MADE FOR SUFFERING, NOT FOR SPEED");
-                Console.WriteLine("THE GPU ACCELERATION FUNCTION IS NOT AVAILABLE BECAUSE FUCK YOU WITH YOUR FUCKING LINUX");
-                Console.WriteLine("!!!!!");
-                bitIndex = BruteforceParallel.Bruteforce(piece.Bytes, piece.Hash.ToByteArrayFromHex(), countOfThreads);
-            }
-            else
+        {
+            try
             {
                 bitIndex = BruteforceCuda.Bruteforce(piece.Bytes, piece.Hash.ToByteArrayFromHex());
+                Console.WriteLine("GPU acceleration is being used");
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"GPU acceleration not available: {ex.Message}");
+                Console.WriteLine("Falling back to CPU processing...");
+                bitIndex = BruteforceParallel.Bruteforce(piece.Bytes, piece.Hash.ToByteArrayFromHex(), countOfThreads);
+            }
+        }
         else
         {
-            Console.WriteLine("YOU REALLY WANT TO NOT USE GPU?!!");
+            Console.WriteLine("Running in CPU mode");
             bitIndex = BruteforceParallel.Bruteforce(piece.Bytes, piece.Hash.ToByteArrayFromHex(), countOfThreads);
         }
 
@@ -246,22 +248,21 @@ class Worker
         
         if (useGpu)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Console.WriteLine("YOUR LINUX IS MADE FOR SUFFERING, NOT FOR SPEED");
-                Console.WriteLine("THE GPU ACCELERATION FUNCTION IS NOT AVAILABLE BECAUSE FUCK YOU WITH YOUR FUCKING LINUX");
-                Console.WriteLine("!!!!!");
-                bitIndex = BruteforceParallel.Bruteforce(data, pieceHash.ToByteArrayFromHex(), countOfThreads);
-            }
-            else
+            try
             {
                 bitIndex = BruteforceCuda.Bruteforce(data, pieceHash.ToByteArrayFromHex());
+                Console.WriteLine("GPU acceleration is being used");
             }
-
+            catch (Exception ex)
+            {
+                Console.WriteLine($"GPU acceleration not available: {ex.Message}");
+                Console.WriteLine("Falling back to CPU processing...");
+                bitIndex = BruteforceParallel.Bruteforce(data, pieceHash.ToByteArrayFromHex(), countOfThreads);
+            }
         }
         else
         {
-            Console.WriteLine("YOU REALLY WANT TO NOT USE GPU?!!");
+            Console.WriteLine("Running in CPU mode");
             bitIndex = BruteforceParallel.Bruteforce(data, pieceHash.ToByteArrayFromHex(), countOfThreads);
         }
 
@@ -350,17 +351,14 @@ class Worker
     {
         TorrentInfo.TryLoad(torrentPath, out var torrent);
 
-        if (torrent.Files.Length == 1 && torrent.Files[0].FilePath.Contains("Posobie_dlja_samoubijz"))
-            Console.WriteLine("Nihua sebe, segodnya huyarim petuha!");
-        else
-            Console.WriteLine("Loaded .torrent, processing");
+        Console.WriteLine("Loaded .torrent, processing");
 
         var pieces = PersistenceManager.Verify(dataPath, torrent);
 
         Console.WriteLine($"Found {pieces.Count} broken pieces");
 
         foreach (var piece in pieces)
-        { // TODO: че за хуйню я тут понаписал, исправить надо
+        { // TODO: refactor this section
             Console.WriteLine($"Processing piece no. {piece.Index}");
 
             PersistenceManager.FlipBit(dataPath, torrent, piece.Index, bitIndex);
