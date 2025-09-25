@@ -17,7 +17,7 @@ Write-Host "========================================" -ForegroundColor Cyan
 if ($env:GITHUB_ACTIONS -eq "true" -or $env:CI -eq "true") {
     Write-Host "Running in CI environment - skipping PTX compilation" -ForegroundColor Yellow
     Write-Host "PTX files will be generated during local development" -ForegroundColor Yellow
-    exit 0
+    return
 }
 
 # Check if CUDA is installed
@@ -31,13 +31,13 @@ if (-not $CudaPath) {
 if (-not (Test-Path $CudaPath)) {
     Write-Warning "CUDA Toolkit not found. PTX files will not be generated."
     Write-Host "To enable CUDA cross-compilation, install CUDA Toolkit from https://developer.nvidia.com/cuda-downloads" -ForegroundColor Yellow
-    exit 0
+    return
 }
 
 $nvcc = Join-Path $CudaPath "bin\nvcc.exe"
 if (-not (Test-Path $nvcc)) {
     Write-Error "nvcc.exe not found at $nvcc"
-    exit 1
+    return
 }
 
 Write-Host "Using CUDA Toolkit at: $CudaPath" -ForegroundColor Green
@@ -124,8 +124,7 @@ if ($alignedSuccess -and $unalignedSuccess) {
     Write-Host "✓ All PTX files generated successfully!" -ForegroundColor Green
     Write-Host "PTX files are located in: .\$outputDir\" -ForegroundColor Green
     Write-Host "These PTX files can be used on any platform with CUDA support." -ForegroundColor Green
-    exit 0
 } else {
     Write-Host "✗ Some compilations failed. Check the errors above." -ForegroundColor Red
-    exit 1
+    throw "PTX compilation failed"
 }
