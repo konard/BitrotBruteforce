@@ -19,9 +19,12 @@ Write-Host "========================================" -ForegroundColor Cyan
 if (-not $CudaPath) {
     $CudaPath = $env:CUDA_PATH
     if (-not $CudaPath) {
-        $CudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.0"
+        $CudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.4"
         if (-not (Test-Path $CudaPath)) {
-            $CudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8"
+            $CudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.0"
+            if (-not (Test-Path $CudaPath)) {
+                $CudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8"
+            }
         }
     }
 }
@@ -69,8 +72,7 @@ if (-not (Test-Path $outputDir)) {
 $compileArgs = @(
     "-ptx",
     "-arch=sm_50",  # Broad compatibility - supports Maxwell and newer
-    "-use_fast_math",
-    "-allow-unsupported-compiler"  # Allow newer VS versions in CI
+    "-use_fast_math"
 )
 
 if ($Configuration -eq "Release") {
