@@ -69,7 +69,8 @@ if (-not (Test-Path $outputDir)) {
 $compileArgs = @(
     "-ptx",
     "-arch=sm_50",  # Broad compatibility - supports Maxwell and newer
-    "-use_fast_math"
+    "-use_fast_math",
+    "-allow-unsupported-compiler"  # Allow newer VS versions in CI
 )
 
 if ($Configuration -eq "Release") {
