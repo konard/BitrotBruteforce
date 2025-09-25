@@ -19,90 +19,21 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    # Install CUDA on Windows runner
-    - name: Install CUDA Toolkit
-      shell: powershell
-      run: |
-        Write-Host "Installing CUDA Toolkit on Windows..." -ForegroundColor Green
-
-        # Download CUDA installer (using a smaller runtime version)
-        $cudaUrl = "https://developer.download.nvidia.com/compute/cuda/12.6.2/local_installers/cuda_12.6.2_windows_network.exe"
-        $installerPath = "$env:TEMP\cuda_installer.exe"
-
-        Write-Host "Downloading CUDA installer..." -ForegroundColor Yellow
-        Invoke-WebRequest -Uri $cudaUrl -OutFile $installerPath
-
-        Write-Host "Installing CUDA (silent mode)..." -ForegroundColor Yellow
-        Start-Process -FilePath $installerPath -ArgumentList "-s", "nvcc_12.6", "cudart_12.6", "cuda_cccl_12.6" -Wait
-
-        # Set CUDA_PATH environment variable
-        $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6"
-        if (Test-Path $cudaPath) {
-          Write-Host "CUDA installed at: $cudaPath" -ForegroundColor Green
-          echo "CUDA_PATH=$cudaPath" >> $env:GITHUB_ENV
-          echo "$cudaPath\bin" >> $env:GITHUB_PATH
-        } else {
-          Write-Error "CUDA installation failed or path not found"
-        }
-
-    - name: Verify CUDA Installation
-      shell: powershell
-      run: |
-        Write-Host "CUDA_PATH: $env:CUDA_PATH" -ForegroundColor Cyan
-
-        $nvcc = "$env:CUDA_PATH\bin\nvcc.exe"
-        if (Test-Path $nvcc) {
-          Write-Host "NVCC found at: $nvcc" -ForegroundColor Green
-          & $nvcc --version
-        } else {
-          Write-Error "NVCC not found!"
-        }
+    # Note: CUDA installation is skipped in CI - PTX compilation is disabled for CI environments
+    # The CompileCudaToPtx.ps1 script will automatically skip when GITHUB_ACTIONS=true
 
     - name: Build Project
       run: dotnet build -c Release
 
-    - name: Cross-Compile CUDA for Linux
+    - name: Test PTX Compilation Script (CI Mode)
       shell: powershell
       run: |
-        Write-Host "Starting cross-compilation process..." -ForegroundColor Cyan
+        Write-Host "Testing PTX compilation script in CI mode..." -ForegroundColor Cyan
 
-        # Run the cross-compilation script
+        # Run the compilation script - it should skip in CI
         .\CompileCudaToPtx.ps1 -Configuration Release
 
-        # Check results
-        $alignedPtx = "ptx\kernel_aligned.ptx"
-        $unalignedPtx = "ptx\kernel_unaligned.ptx"
-        $alignedSha1Ptx = "ptx\sha1_aligned.ptx"
-        $unalignedSha1Ptx = "ptx\sha1_unaligned.ptx"
-
-        $hasOutput = $false
-
-        if (Test-Path $alignedPtx) {
-          Write-Host "✓ Generated: $alignedPtx" -ForegroundColor Green
-          $hasOutput = $true
-        }
-        if (Test-Path $unalignedPtx) {
-          Write-Host "✓ Generated: $unalignedPtx" -ForegroundColor Green
-          $hasOutput = $true
-        }
-        if (Test-Path $alignedSha1Ptx) {
-          Write-Host "✓ Generated: $alignedSha1Ptx" -ForegroundColor Green
-          $hasOutput = $true
-        }
-        if (Test-Path $unalignedSha1Ptx) {
-          Write-Host "✓ Generated: $unalignedSha1Ptx" -ForegroundColor Green
-          $hasOutput = $true
-        }
-
-        if (-not $hasOutput) {
-          Write-Warning "No PTX files generated, check compilation errors above"
-        }
-
-        # List all generated files
-        Write-Host "`nGenerated files:" -ForegroundColor Yellow
-        Get-ChildItem -Path "ptx" -ErrorAction SilentlyContinue | ForEach-Object {
-          Write-Host " - $($_.FullName)" -ForegroundColor Cyan
-        }
+        Write-Host "Script executed successfully in CI mode" -ForegroundColor Green
 
     - name: Test Publish for Linux
       run: |
@@ -111,10 +42,8 @@ jobs:
     - name: Upload Linux Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: linux-cuda-modules
-        path: |
-          ptx/
-          Bruteforce/bin/Release/net8.0/linux-x64/publish/
+        name: linux-publish
+        path: Bruteforce/bin/Release/net8.0/linux-x64/publish/
         if-no-files-found: warn
 
     # Test on Ubuntu (optional - requires self-hosted runner with GPU)

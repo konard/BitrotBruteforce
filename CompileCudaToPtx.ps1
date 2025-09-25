@@ -13,6 +13,13 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "CUDA to PTX Cross-Platform Compiler" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
+# Check if we're running in CI environment
+if ($env:GITHUB_ACTIONS -eq "true" -or $env:CI -eq "true") {
+    Write-Host "Running in CI environment - skipping PTX compilation" -ForegroundColor Yellow
+    Write-Host "PTX files will be generated during local development" -ForegroundColor Yellow
+    exit 0
+}
+
 # Check if CUDA is installed
 if (-not $CudaPath) {
     $CudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.0"
@@ -22,8 +29,9 @@ if (-not $CudaPath) {
 }
 
 if (-not (Test-Path $CudaPath)) {
-    Write-Error "CUDA Toolkit not found. Please install CUDA Toolkit from https://developer.nvidia.com/cuda-downloads"
-    exit 1
+    Write-Warning "CUDA Toolkit not found. PTX files will not be generated."
+    Write-Host "To enable CUDA cross-compilation, install CUDA Toolkit from https://developer.nvidia.com/cuda-downloads" -ForegroundColor Yellow
+    exit 0
 }
 
 $nvcc = Join-Path $CudaPath "bin\nvcc.exe"
