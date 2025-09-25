@@ -79,8 +79,8 @@
         </ProjectReference>
     </ItemGroup>
 
-    <!-- Cross-compile CUDA to PTX when publishing for Linux from Windows -->
-    <Target Name="CompileCudaToPtx" BeforeTargets="PrepareForPublish" Condition="'$(RuntimeIdentifier)' == 'linux-x64' and '$(OS)' == 'Windows_NT'">
+    <!-- Cross-compile CUDA to PTX when publishing for Linux from Windows (skip in CI) -->
+    <Target Name="CompileCudaToPtx" BeforeTargets="PrepareForPublish" Condition="'$(RuntimeIdentifier)' == 'linux-x64' and '$(OS)' == 'Windows_NT' and '$(GITHUB_ACTIONS)' != 'true'">
         <Message Importance="high" Text="Compiling CUDA code to PTX for Linux deployment..." />
         <Exec Command="powershell.exe -ExecutionPolicy Bypass -File ..\CompileCudaToPtx.ps1" WorkingDirectory="$(MSBuildProjectDirectory)\.." />
     </Target>
