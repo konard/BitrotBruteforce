@@ -8,8 +8,58 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Build actual Linux .so files on Linux runner
+  build-linux-cuda:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install CUDA Toolkit
+      run: |
+        # Add NVIDIA package repository
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+        sudo dpkg -i cuda-keyring_1.1-1_all.deb
+        sudo apt-get update
+
+        # Install CUDA toolkit (compiler only, no driver needed)
+        sudo apt-get install -y cuda-toolkit-12-0 --no-install-recommends
+
+        # Set up environment
+        echo 'export PATH=/usr/local/cuda-12.0/bin:$PATH' >> $GITHUB_ENV
+        echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.0/lib64:$LD_LIBRARY_PATH' >> $GITHUB_ENV
+
+    - name: Build CUDA .so files
+      run: |
+        # Create output directory
+        mkdir -p linux-libs
+
+        # Compile CudaAlignedBitrotFinder
+        nvcc -shared -Xcompiler -fPIC \
+          -o linux-libs/CudaAlignedBitrotFinder.so \
+          CudaAlignedBitrotFinder/kernel.cu CudaAlignedBitrotFinder/sha1.cu \
+          -arch=sm_50 -O3
+
+        # Compile CudaUnalignedBitrotFinder
+        nvcc -shared -Xcompiler -fPIC \
+          -o linux-libs/CudaUnalignedBitrotFinder.so \
+          CudaUnalignedBitrotFinder/kernel.cu CudaUnalignedBitrotFinder/sha1.cu \
+          -arch=sm_50 -O3
+
+        # Verify the files were created
+        ls -la linux-libs/
+
+    - name: Upload Linux .so files
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-cuda-libs
+        path: linux-libs/*.so
+        if-no-files-found: error
+
+  # Windows build and publish job
   cross-compile-cuda:
     runs-on: windows-latest
+    needs: build-linux-cuda
 
     steps:
     - uses: actions/checkout@v4
@@ -19,25 +69,36 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    # Note: CUDA installation is skipped in CI - PTX compilation is disabled for CI environments
-    # The CompileCudaToPtx.ps1 script will automatically skip when GITHUB_ACTIONS=true
+    - name: Download Linux .so files
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-cuda-libs
+        path: Bruteforce/libs/
+
+    - name: List downloaded files
+      shell: powershell
+      run: |
+        Write-Host "Downloaded Linux .so files:" -ForegroundColor Cyan
+        Get-ChildItem -Path "Bruteforce\libs" -Recurse | Format-Table Name, Length
 
     - name: Build Project
       run: dotnet build Bruteforce/Bruteforce.csproj -c Release
 
-    - name: Test PTX Compilation Script (CI Mode)
-      shell: powershell
-      run: |
-        Write-Host "Testing PTX compilation script in CI mode..." -ForegroundColor Cyan
-
-        # Run the compilation script - it should skip in CI
-        .\CompileCudaToPtx.ps1 -Configuration Release
-
-        Write-Host "Script executed successfully in CI mode" -ForegroundColor Green
-
-    - name: Test Publish for Linux
+    - name: Publish for Linux
       run: |
         dotnet publish Bruteforce/Bruteforce.csproj -c Release -r linux-x64 --self-contained
+
+    - name: Verify Linux binaries in publish
+      shell: powershell
+      run: |
+        $publishPath = "Bruteforce\bin\Release\net8.0\linux-x64\publish\libs"
+        Write-Host "Checking for Linux .so files in: $publishPath" -ForegroundColor Cyan
+
+        if (Test-Path $publishPath) {
+            Get-ChildItem -Path $publishPath -Filter "*.so" | Format-Table Name, Length
+        } else {
+            Write-Warning "libs directory not found in publish output"
+        }
 
     - name: Upload Linux Artifacts
       uses: actions/upload-artifact@v4
@@ -45,19 +106,3 @@ jobs:
         name: linux-publish
         path: Bruteforce/bin/Release/net8.0/linux-x64/publish/
         if-no-files-found: warn
-
-    # Test on Ubuntu (optional - requires self-hosted runner with GPU)
-    # Uncomment if you have a Linux runner with NVIDIA GPU available
-    # test-linux:
-    #   needs: cross-compile-cuda
-    #   runs-on: [self-hosted, linux, gpu]
-    #
-    #   steps:
-    #   - uses: actions/download-artifact@v4
-    #     with:
-    #       name: linux-cuda-modules
-    #
-    #   - name: Test Linux Binary
-    #     run: |
-    #       chmod +x Bruteforce/bin/Release/net8.0/linux-x64/publish/Bruteforce
-    #       ./Bruteforce/bin/Release/net8.0/linux-x64/publish/Bruteforce --help

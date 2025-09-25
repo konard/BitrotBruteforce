@@ -79,15 +79,30 @@
         </ProjectReference>
     </ItemGroup>
 
-    <!-- Cross-compile CUDA to PTX when publishing for Linux from Windows (skip in CI) -->
-    <Target Name="CompileCudaToPtx" BeforeTargets="PrepareForPublish" Condition="'$(RuntimeIdentifier)' == 'linux-x64' and '$(OS)' == 'Windows_NT' and '$(GITHUB_ACTIONS)' != 'true'">
-        <Message Importance="high" Text="Compiling CUDA code to PTX for Linux deployment..." />
-        <Exec Command="powershell.exe -ExecutionPolicy Bypass -File ..\CompileCudaToPtx.ps1" WorkingDirectory="$(MSBuildProjectDirectory)\.." />
+    <!-- Cross-compile CUDA when publishing for Linux from Windows -->
+    <Target Name="CompileCudaForLinux" BeforeTargets="PrepareForPublish" Condition="'$(RuntimeIdentifier)' == 'linux-x64' and '$(OS)' == 'Windows_NT'">
+        <Message Importance="high" Text="Preparing CUDA modules for Linux deployment..." />
+        <!-- Use pre-built .so files if available, otherwise compile PTX -->
+        <Exec Command="powershell.exe -ExecutionPolicy Bypass -File ..\CompileCudaToPtx.ps1"
+              WorkingDirectory="$(MSBuildProjectDirectory)\.."
+              Condition="!Exists('$(MSBuildProjectDirectory)\libs\CudaAlignedBitrotFinder.so') and '$(GITHUB_ACTIONS)' != 'true'" />
+        <Message Importance="high" Text="Using pre-built Linux .so files"
+                 Condition="Exists('$(MSBuildProjectDirectory)\libs\CudaAlignedBitrotFinder.so')" />
     </Target>
 
-    <!-- Include PTX files for Linux deployment -->
+    <!-- Include Linux .so files for Linux deployment -->
     <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
-        <Content Include="..\ptx\*.ptx" Condition="Exists('..\ptx')">
+        <!-- Include compiled .so files if they exist -->
+        <Content Include="libs\CudaAlignedBitrotFinder.so" Condition="Exists('libs\CudaAlignedBitrotFinder.so')">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        </Content>
+        <Content Include="libs\CudaUnalignedBitrotFinder.so" Condition="Exists('libs\CudaUnalignedBitrotFinder.so')">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        </Content>
+        <!-- Include PTX files as fallback if .so files don't exist -->
+        <Content Include="..\ptx\*.ptx" Condition="Exists('..\ptx') and !Exists('libs\CudaAlignedBitrotFinder.so')">
             <Link>ptx\%(Filename)%(Extension)</Link>
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
