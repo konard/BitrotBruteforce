@@ -8,51 +8,6 @@ namespace Bruteforce;
 
 public partial class BruteforceCuda
 {
-    private static readonly bool _usePtx;
-    private static readonly bool _isLinux;
-
-    static BruteforceCuda()
-    {
-        _isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
-
-        // On Linux, check if we need to use PTX (only if .so files don't exist)
-        if (_isLinux)
-        {
-            Console.WriteLine("Initializing CUDA support on Linux...");
-
-            // First check if native .so files exist
-            bool alignedSoExists = System.IO.File.Exists("libs/CudaAlignedBitrotFinder.so");
-            bool unalignedSoExists = System.IO.File.Exists("libs/CudaUnalignedBitrotFinder.so");
-            bool hasSoFiles = alignedSoExists || unalignedSoExists;
-
-            Console.WriteLine($"Aligned .so exists: {alignedSoExists}");
-            Console.WriteLine($"Unaligned .so exists: {unalignedSoExists}");
-
-            bool alignedPtxExists = System.IO.File.Exists("ptx/kernel_aligned.ptx");
-            bool unalignedPtxExists = System.IO.File.Exists("ptx/kernel_unaligned.ptx");
-            Console.WriteLine($"Aligned PTX exists: {alignedPtxExists}");
-            Console.WriteLine($"Unaligned PTX exists: {unalignedPtxExists}");
-
-            // Use PTX only if .so files don't exist and PTX files are available
-            if (!hasSoFiles && alignedPtxExists)
-            {
-                Console.WriteLine("No .so files found, checking PTX support...");
-                _usePtx = CudaPtxLoader.IsSupported();
-                Console.WriteLine($"PTX mode enabled: {_usePtx}");
-            }
-            else if (hasSoFiles)
-            {
-                Console.WriteLine("Using native .so files");
-                _usePtx = false;
-            }
-            else
-            {
-                Console.WriteLine("Warning: Neither .so files nor PTX files found!");
-                _usePtx = false;
-            }
-        }
-    }
-
     public static int Bruteforce(byte[] data, byte[] hash)
     {
         if (IsEqual(hash, GetHash(data)))
@@ -62,27 +17,16 @@ public partial class BruteforceCuda
 
         try
         {
-            if (_usePtx)
-            {
-                // Use PTX loader on Linux (fallback when no .so files)
-                if(data.Length % 64 == 0)
-                    CudaPtxLoader.BruteforceBitsAligned(data, hash, data.Length, ref result);
-                else
-                    CudaPtxLoader.BruteforceBitsUnaligned(data, hash, data.Length, ref result);
-            }
+            // Use native libraries (DLLs on Windows, .so on Linux)
+            if(data.Length % 64 == 0)
+                BruteforceAligned.bruteforceBits(data, hash, data.Length, ref result);
             else
-            {
-                // Use native libraries (DLLs on Windows, .so on Linux)
-                if(data.Length % 64 == 0)
-                    BruteforceAligned.bruteforceBits(data, hash, data.Length, ref result);
-                else
-                    BruteforceUnaligned.bruteforceBits(data, hash, data.Length, ref result);
-            }
+                BruteforceUnaligned.bruteforceBits(data, hash, data.Length, ref result);
         }
         catch (DllNotFoundException ex)
         {
-            if (_isLinux)
-                throw new Exception($"CUDA libraries not found on Linux. Ensure PTX files are present or .so files are available. Error: {ex.Message}", ex);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                throw new Exception($"CUDA libraries not found on Linux. Ensure .so files are available in libs/ folder. Error: {ex.Message}", ex);
             else
                 throw new Exception($"CUDA libraries not found. Ensure CUDA is installed. Error: {ex.Message}", ex);
         }
@@ -112,28 +56,20 @@ public class BruteforceAligned
 
     private static IntPtr ImportResolver(string libraryName, System.Reflection.Assembly assembly, DllImportSearchPath? searchPath)
     {
-        if (libraryName == "libs/CudaAlignedBitrotFinder" || libraryName == "CudaAlignedBitrotFinder")
+        // Since class name is BruteforceAligned, we know exactly what library to load
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                // Try to load Linux .so file
-                string[] paths = { "libs/CudaAlignedBitrotFinder.so", "./libs/CudaAlignedBitrotFinder.so", "CudaAlignedBitrotFinder.so" };
-                foreach (var path in paths)
-                {
-                    if (NativeLibrary.TryLoad(path, out IntPtr handle))
-                        return handle;
-                }
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                // Try to load Windows DLL
-                string[] paths = { "libs/CudaAlignedBitrotFinder.dll", "./libs/CudaAlignedBitrotFinder.dll", "CudaAlignedBitrotFinder.dll" };
-                foreach (var path in paths)
-                {
-                    if (NativeLibrary.TryLoad(path, out IntPtr handle))
-                        return handle;
-                }
-            }
+            // Try to load Linux .so file
+            string soPath = "libs/CudaAlignedBitrotFinder.so";
+            if (NativeLibrary.TryLoad(soPath, out IntPtr handle))
+                return handle;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            // Try to load Windows DLL
+            string dllPath = "libs/CudaAlignedBitrotFinder.dll";
+            if (NativeLibrary.TryLoad(dllPath, out IntPtr handle))
+                return handle;
         }
         // Fall back to default resolution
         return IntPtr.Zero;
@@ -153,28 +89,20 @@ public class BruteforceUnaligned
 
     private static IntPtr ImportResolver(string libraryName, System.Reflection.Assembly assembly, DllImportSearchPath? searchPath)
     {
-        if (libraryName == "libs/CudaUnalignedBitrotFinder" || libraryName == "CudaUnalignedBitrotFinder")
+        // Since class name is BruteforceUnaligned, we know exactly what library to load
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                // Try to load Linux .so file
-                string[] paths = { "libs/CudaUnalignedBitrotFinder.so", "./libs/CudaUnalignedBitrotFinder.so", "CudaUnalignedBitrotFinder.so" };
-                foreach (var path in paths)
-                {
-                    if (NativeLibrary.TryLoad(path, out IntPtr handle))
-                        return handle;
-                }
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                // Try to load Windows DLL
-                string[] paths = { "libs/CudaUnalignedBitrotFinder.dll", "./libs/CudaUnalignedBitrotFinder.dll", "CudaUnalignedBitrotFinder.dll" };
-                foreach (var path in paths)
-                {
-                    if (NativeLibrary.TryLoad(path, out IntPtr handle))
-                        return handle;
-                }
-            }
+            // Try to load Linux .so file
+            string soPath = "libs/CudaUnalignedBitrotFinder.so";
+            if (NativeLibrary.TryLoad(soPath, out IntPtr handle))
+                return handle;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            // Try to load Windows DLL
+            string dllPath = "libs/CudaUnalignedBitrotFinder.dll";
+            if (NativeLibrary.TryLoad(dllPath, out IntPtr handle))
+                return handle;
         }
         // Fall back to default resolution
         return IntPtr.Zero;
