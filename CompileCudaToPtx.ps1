@@ -17,9 +17,12 @@ Write-Host "========================================" -ForegroundColor Cyan
 
 # Check if CUDA is installed
 if (-not $CudaPath) {
-    $CudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.0"
-    if (-not (Test-Path $CudaPath)) {
-        $CudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8"
+    $CudaPath = $env:CUDA_PATH
+    if (-not $CudaPath) {
+        $CudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.0"
+        if (-not (Test-Path $CudaPath)) {
+            $CudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8"
+        }
     }
 }
 
@@ -33,6 +36,22 @@ $nvcc = Join-Path $CudaPath "bin\nvcc.exe"
 if (-not (Test-Path $nvcc)) {
     Write-Error "nvcc.exe not found at $nvcc"
     exit 1
+}
+
+# Setup Visual Studio environment if running in GitHub Actions
+if ($env:GITHUB_ACTIONS -eq "true") {
+    Write-Host "Setting up Visual Studio environment for GitHub Actions..." -ForegroundColor Yellow
+    $vsPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+    if (Test-Path $vsPath) {
+        cmd /c "`"$vsPath`" && set" | ForEach-Object {
+            if ($_ -match "^([^=]+)=(.*)$") {
+                [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2])
+            }
+        }
+        Write-Host "Visual Studio environment configured" -ForegroundColor Green
+    } else {
+        Write-Warning "Visual Studio environment not found - compilation may fail"
+    }
 }
 
 Write-Host "Using CUDA Toolkit at: $CudaPath" -ForegroundColor Green
