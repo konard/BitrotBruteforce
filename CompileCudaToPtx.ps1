@@ -84,9 +84,9 @@ foreach ($source in $alignedSources) {
     $process = Start-Process -FilePath $nvcc -ArgumentList $args -NoNewWindow -Wait -PassThru
 
     if ($process.ExitCode -eq 0) {
-        Write-Host "✓ Successfully compiled to $outputFile" -ForegroundColor Green
+        Write-Host "[SUCCESS] Successfully compiled to $outputFile" -ForegroundColor Green
     } else {
-        Write-Host "✗ Failed to compile $source" -ForegroundColor Red
+        Write-Host "[FAILED] Failed to compile $source" -ForegroundColor Red
         $alignedSuccess = $false
     }
 }
@@ -111,9 +111,9 @@ foreach ($source in $unalignedSources) {
     $process = Start-Process -FilePath $nvcc -ArgumentList $args -NoNewWindow -Wait -PassThru
 
     if ($process.ExitCode -eq 0) {
-        Write-Host "✓ Successfully compiled to $outputFile" -ForegroundColor Green
+        Write-Host "[SUCCESS] Successfully compiled to $outputFile" -ForegroundColor Green
     } else {
-        Write-Host "✗ Failed to compile $source" -ForegroundColor Red
+        Write-Host "[FAILED] Failed to compile $source" -ForegroundColor Red
         $unalignedSuccess = $false
     }
 }
@@ -121,11 +121,11 @@ foreach ($source in $unalignedSources) {
 # Summary
 Write-Host "`n========================================" -ForegroundColor Cyan
 if ($alignedSuccess -and $unalignedSuccess) {
-    Write-Host "✓ All PTX files generated successfully!" -ForegroundColor Green
+    Write-Host "[SUCCESS] All PTX files generated successfully!" -ForegroundColor Green
     Write-Host "PTX files are located in: .\$outputDir\" -ForegroundColor Green
     Write-Host "These PTX files can be used on any platform with CUDA support." -ForegroundColor Green
     exit 0
 } else {
-    Write-Host "✗ Some compilations failed. Check the errors above." -ForegroundColor Red
+    Write-Host "[FAILED] Some compilations failed. Check the errors above." -ForegroundColor Red
     exit 1
 }
