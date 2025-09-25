@@ -13,12 +13,7 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "CUDA to PTX Cross-Platform Compiler" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-# Check if we're running in CI environment
-if ($env:GITHUB_ACTIONS -eq "true" -or $env:CI -eq "true") {
-    Write-Host "Running in CI environment - skipping PTX compilation" -ForegroundColor Yellow
-    Write-Host "PTX files will be generated during local development" -ForegroundColor Yellow
-    exit 0
-}
+# Note: In CI environment, CUDA should be installed by the workflow
 
 # Check if CUDA is installed
 if (-not $CudaPath) {

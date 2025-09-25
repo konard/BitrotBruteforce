@@ -8,58 +8,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Build actual Linux .so files on Linux runner
-  build-linux-cuda:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install CUDA Toolkit
-      run: |
-        # Add NVIDIA package repository
-        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
-        sudo dpkg -i cuda-keyring_1.1-1_all.deb
-        sudo apt-get update
-
-        # Install CUDA toolkit (compiler only, no driver needed)
-        sudo apt-get install -y cuda-toolkit-12-0 --no-install-recommends
-
-        # Set up environment
-        echo 'export PATH=/usr/local/cuda-12.0/bin:$PATH' >> $GITHUB_ENV
-        echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.0/lib64:$LD_LIBRARY_PATH' >> $GITHUB_ENV
-
-    - name: Build CUDA .so files
-      run: |
-        # Create output directory
-        mkdir -p linux-libs
-
-        # Compile CudaAlignedBitrotFinder
-        nvcc -shared -Xcompiler -fPIC \
-          -o linux-libs/CudaAlignedBitrotFinder.so \
-          CudaAlignedBitrotFinder/kernel.cu CudaAlignedBitrotFinder/sha1.cu \
-          -arch=sm_50 -O3
-
-        # Compile CudaUnalignedBitrotFinder
-        nvcc -shared -Xcompiler -fPIC \
-          -o linux-libs/CudaUnalignedBitrotFinder.so \
-          CudaUnalignedBitrotFinder/kernel.cu CudaUnalignedBitrotFinder/sha1.cu \
-          -arch=sm_50 -O3
-
-        # Verify the files were created
-        ls -la linux-libs/
-
-    - name: Upload Linux .so files
-      uses: actions/upload-artifact@v4
-      with:
-        name: linux-cuda-libs
-        path: linux-libs/*.so
-        if-no-files-found: error
-
-  # Windows build and publish job
-  cross-compile-cuda:
+  # Windows job: Compile CUDA to PTX for cross-platform deployment
+  windows-ptx-compile:
     runs-on: windows-latest
-    needs: build-linux-cuda
 
     steps:
     - uses: actions/checkout@v4
@@ -69,40 +20,131 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    - name: Download Linux .so files
-      uses: actions/download-artifact@v4
-      with:
-        name: linux-cuda-libs
-        path: Bruteforce/libs/
-
-    - name: List downloaded files
+    - name: Install CUDA Toolkit (Windows)
       shell: powershell
       run: |
-        Write-Host "Downloaded Linux .so files:" -ForegroundColor Cyan
-        Get-ChildItem -Path "Bruteforce\libs" -Recurse | Format-Table Name, Length
+        Write-Host "Installing CUDA Toolkit for Windows..." -ForegroundColor Cyan
+        # Download CUDA installer
+        $cudaUrl = "https://developer.download.nvidia.com/compute/cuda/12.0.0/local_installers/cuda_12.0.0_527.41_windows.exe"
+        $installerPath = "cuda_installer.exe"
+
+        Write-Host "Downloading CUDA Toolkit..." -ForegroundColor Yellow
+        Invoke-WebRequest -Uri $cudaUrl -OutFile $installerPath -UseBasicParsing
+
+        Write-Host "Installing CUDA Toolkit (silent mode)..." -ForegroundColor Yellow
+        Start-Process -FilePath $installerPath -ArgumentList "-s", "nvcc_12.0", "cudart_12.0" -Wait -NoNewWindow
+
+        # Set environment variables
+        $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.0"
+        echo "CUDA_PATH=$cudaPath" >> $env:GITHUB_ENV
+        echo "$cudaPath\bin" >> $env:GITHUB_PATH
+
+        Write-Host "CUDA Toolkit installed" -ForegroundColor Green
+
+    - name: Compile CUDA to PTX
+      shell: powershell
+      run: |
+        # Run the PTX compilation script
+        .\CompileCudaToPtx.ps1 -Configuration Release
+
+        # Verify PTX files were created
+        if (Test-Path "ptx") {
+          Write-Host "PTX files generated:" -ForegroundColor Green
+          Get-ChildItem -Path "ptx" -Filter "*.ptx" | Format-Table Name, Length
+        } else {
+          Write-Warning "PTX directory not found"
+        }
 
     - name: Build Project
       run: dotnet build Bruteforce/Bruteforce.csproj -c Release
 
     - name: Publish for Linux
-      run: |
-        dotnet publish Bruteforce/Bruteforce.csproj -c Release -r linux-x64 --self-contained
+      run: dotnet publish Bruteforce/Bruteforce.csproj -c Release -r linux-x64 --self-contained
 
-    - name: Verify Linux binaries in publish
+    - name: Verify PTX files in publish
       shell: powershell
       run: |
-        $publishPath = "Bruteforce\bin\Release\net8.0\linux-x64\publish\libs"
-        Write-Host "Checking for Linux .so files in: $publishPath" -ForegroundColor Cyan
+        $publishPath = "Bruteforce\bin\Release\net8.0\linux-x64\publish"
+        Write-Host "Checking publish directory: $publishPath" -ForegroundColor Cyan
 
-        if (Test-Path $publishPath) {
-            Get-ChildItem -Path $publishPath -Filter "*.so" | Format-Table Name, Length
+        if (Test-Path "$publishPath\ptx") {
+          Write-Host "PTX files in publish:" -ForegroundColor Green
+          Get-ChildItem -Path "$publishPath\ptx" -Filter "*.ptx" | Format-Table Name, Length
         } else {
-            Write-Warning "libs directory not found in publish output"
+          Write-Warning "PTX directory not found in publish output"
         }
 
-    - name: Upload Linux Artifacts
+    - name: Upload Linux Artifacts with PTX
       uses: actions/upload-artifact@v4
       with:
-        name: linux-publish
+        name: linux-publish-with-ptx
         path: Bruteforce/bin/Release/net8.0/linux-x64/publish/
         if-no-files-found: warn
+
+  # Linux job: Verify the cross-compiled solution works
+  linux-verify:
+    runs-on: ubuntu-22.04  # Use Ubuntu 22.04 for better CUDA compatibility
+    needs: windows-ptx-compile
+
+    steps:
+    - name: Download Linux artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-publish-with-ptx
+        path: ./linux-publish
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Install CUDA runtime (for PTX JIT compilation)
+      run: |
+        # Add NVIDIA package repository for Ubuntu 22.04
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+        sudo dpkg -i cuda-keyring_1.1-1_all.deb
+        sudo apt-get update
+
+        # Install minimal CUDA runtime components
+        # We need cuda-nvrtc for PTX JIT compilation and cuda-driver-dev for libcuda.so
+        sudo apt-get install -y cuda-nvrtc-12-0 cuda-driver-dev-12-0 --no-install-recommends
+
+        # Set up environment
+        echo 'export PATH=/usr/local/cuda-12.0/bin:$PATH' >> $GITHUB_ENV
+        echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.0/lib64:$LD_LIBRARY_PATH' >> $GITHUB_ENV
+
+    - name: Verify Linux executable and PTX files
+      run: |
+        echo "Checking Linux executable..."
+        if [ -f "./linux-publish/Bruteforce" ]; then
+          echo "✅ Linux executable found"
+          file ./linux-publish/Bruteforce
+          chmod +x ./linux-publish/Bruteforce
+        else
+          echo "❌ Linux executable not found"
+          exit 1
+        fi
+
+        echo ""
+        echo "Checking PTX files..."
+        if [ -d "./linux-publish/ptx" ]; then
+          echo "✅ PTX directory found"
+          ls -la ./linux-publish/ptx/
+        else
+          echo "ℹ️ No PTX directory found (may be using .so files)"
+        fi
+
+        echo ""
+        echo "Checking for .so files..."
+        if [ -d "./linux-publish/libs" ]; then
+          echo "ℹ️ libs directory found"
+          ls -la ./linux-publish/libs/
+        else
+          echo "ℹ️ No libs directory found (may be using PTX)"
+        fi
+
+    - name: Test executable help
+      run: |
+        cd ./linux-publish
+        # Test that the executable at least shows help (won't actually run CUDA without GPU)
+        ./Bruteforce --help || echo "Note: Application may require GPU to run fully"

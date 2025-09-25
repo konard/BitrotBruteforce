@@ -34,10 +34,22 @@ jobs:
       run: |
         $publishPath = "Bruteforce\bin\Release\net8.0\linux-x64\publish"
         if (Test-Path $publishPath) {
-          Write-Host "✅ Linux publish directory created successfully"
-          Get-ChildItem -Path $publishPath -Recurse | Select-Object Name, Length
+          Write-Host "Success: Linux publish directory created" -ForegroundColor Green
+          Get-ChildItem -Path $publishPath | Select-Object Name, Length | Format-Table
+
+          # Check for PTX files
+          if (Test-Path "$publishPath\ptx") {
+            Write-Host "PTX directory found:" -ForegroundColor Cyan
+            Get-ChildItem -Path "$publishPath\ptx" | Select-Object Name, Length | Format-Table
+          }
+
+          # Check for libs
+          if (Test-Path "$publishPath\libs") {
+            Write-Host "Libs directory found:" -ForegroundColor Cyan
+            Get-ChildItem -Path "$publishPath\libs" | Select-Object Name, Length | Format-Table
+          }
         } else {
-          Write-Host "❌ Linux publish directory not found"
+          Write-Host "Error: Linux publish directory not found" -ForegroundColor Red
           exit 1
         }
 
@@ -49,7 +61,7 @@ jobs:
 
   verify-linux-artifacts:
     needs: test-windows-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Download Linux artifacts
@@ -61,16 +73,27 @@ jobs:
     - name: Verify Linux executable
       run: |
         if [ -f "./linux-publish/Bruteforce" ]; then
-          echo "✅ Linux executable found"
+          echo "Success: Linux executable found"
           file ./linux-publish/Bruteforce
           chmod +x ./linux-publish/Bruteforce
           echo "Executable permissions set"
         else
-          echo "❌ Linux executable not found"
+          echo "Error: Linux executable not found"
           exit 1
         fi
 
-    - name: Check for required libraries
+    - name: Check for CUDA support files
       run: |
-        echo "Checking for CUDA libraries in publish directory:"
-        find ./linux-publish -name "*.so" -o -name "*.dll" | head -20
+        echo "Checking for CUDA support files in publish directory:"
+        echo ""
+
+        echo "PTX files:"
+        find ./linux-publish -name "*.ptx" 2>/dev/null || echo "No PTX files found"
+        echo ""
+
+        echo "Shared libraries:"
+        find ./linux-publish -name "*.so" 2>/dev/null || echo "No .so files found"
+        echo ""
+
+        echo "DLL files (should not be in Linux build):"
+        find ./linux-publish -name "*.dll" 2>/dev/null || echo "No DLL files found (correct)"
