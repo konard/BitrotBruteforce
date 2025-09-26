@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -17,7 +17,7 @@ public partial class BruteforceCuda
 
         if(data.Length % 64 == 0)
             BruteforceAligned.bruteforceBits(data, hash, data.Length, ref result);
-        else 
+        else
             BruteforceUnaligned.bruteforceBits(data, hash, data.Length, ref result);
 
         if (result == uint.MaxValue)
