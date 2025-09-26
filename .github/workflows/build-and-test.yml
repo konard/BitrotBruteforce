@@ -1,0 +1,316 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  release:
+    types: [published]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  build-cuda-libraries:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build CUDA Libraries with Docker
+      run: |
+        cd Bruteforce
+        # Build CUDA libraries using Docker with NVIDIA CUDA image
+        docker run --rm -v $PWD/../:/app nvidia/cuda:12.6.3-cudnn-devel-ubuntu24.04 bash -c "
+          apt-get update &&
+          apt-get install -y cmake build-essential &&
+          cd /app/CudaAlignedBitrotFinder/ &&
+          rm -rf build || true &&
+          mkdir build &&
+          cd build &&
+          cmake .. &&
+          cmake --build . &&
+          mv /app/CudaAlignedBitrotFinder/build/libCudaAlignedBitrotFinder.so /app/Bruteforce/libs/CudaAlignedBitrotFinder.so &&
+          cd /app/CudaUnalignedBitrotFinder/ &&
+          rm -rf build || true &&
+          mkdir build &&
+          cd build &&
+          cmake .. &&
+          cmake --build . &&
+          mv /app/CudaUnalignedBitrotFinder/build/libCudaUnalignedBitrotFinder.so /app/Bruteforce/libs/CudaUnalignedBitrotFinder.so
+        "
+
+    - name: Upload CUDA Libraries
+      uses: actions/upload-artifact@v4
+      with:
+        name: cuda-libraries
+        path: |
+          Bruteforce/libs/CudaAlignedBitrotFinder.so
+          Bruteforce/libs/CudaUnalignedBitrotFinder.so
+
+  build-cuda-libraries-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup CUDA
+      uses: Jimver/cuda-toolkit@v0.2.11
+      with:
+        cuda: '12.6.3'
+        method: 'network'
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: Build CUDA Libraries for Windows
+      run: |
+        # Build CudaAlignedBitrotFinder
+        cd CudaAlignedBitrotFinder
+        msbuild CudaAlignedBitrotFinder.vcxproj -p:Configuration=Release -p:Platform=x64
+
+        # Build CudaUnalignedBitrotFinder
+        cd ../CudaUnalignedBitrotFinder
+        msbuild CudaUnalignedBitrotFinder.vcxproj -p:Configuration=Release -p:Platform=x64
+
+        # Copy built libraries to Bruteforce/libs
+        mkdir -p ../Bruteforce/libs
+        cp bin/x64/Release/CudaAlignedBitrotFinder.dll ../Bruteforce/libs/
+        cp bin/x64/Release/CudaUnalignedBitrotFinder.dll ../Bruteforce/libs/
+      shell: bash
+
+    - name: Upload Windows CUDA Libraries
+      uses: actions/upload-artifact@v4
+      with:
+        name: cuda-libraries-windows
+        path: |
+          Bruteforce/libs/CudaAlignedBitrotFinder.dll
+          Bruteforce/libs/CudaUnalignedBitrotFinder.dll
+
+  test:
+    needs: [build-cuda-libraries]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Download CUDA Libraries
+      uses: actions/download-artifact@v4
+      with:
+        name: cuda-libraries
+        path: Bruteforce/libs/
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run Unit Tests
+      run: dotnet test Tests/Tests.csproj --no-build --verbosity normal --configuration Release
+
+    - name: Build Application for Integration Tests
+      run: dotnet build Bruteforce/Bruteforce.csproj --configuration Release --no-restore
+
+    - name: Run Integration Tests
+      run: |
+        cd Tests/bin/Release/net8.0
+
+        # Test bitrot detection on damaged files
+        echo "Testing bitrot detection on damaged files..."
+        ./bruteforce brute TestData/Petukh.torrent TestData/Damaged/
+
+        # Test integrity check on undamaged files
+        echo "Testing integrity check on undamaged files..."
+        ./bruteforce brute TestData/Petukh.torrent TestData/Undamaged/
+
+        # Test CUDA functionality on Linux (if CUDA is available)
+        echo "Testing CUDA functionality on Linux..."
+        ./bruteforce brute -g TestData/Petukh.torrent TestData/Damaged/ || echo "CUDA test failed or not available"
+
+        # Test file restoration
+        echo "Testing file restoration..."
+        ./bruteforce brute -r TestData/Petukh.torrent TestData/Damaged/ && ./bruteforce brute TestData/Petukh.torrent TestData/Damaged/
+
+  build-crossplatform:
+    needs: [build-cuda-libraries, build-cuda-libraries-windows]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Download CUDA Libraries (Linux)
+      uses: actions/download-artifact@v4
+      with:
+        name: cuda-libraries
+        path: Bruteforce/libs/
+
+    - name: Download CUDA Libraries (Windows)
+      uses: actions/download-artifact@v4
+      with:
+        name: cuda-libraries-windows
+        path: Bruteforce/libs/
+
+    - name: Build Cross-platform (Framework Dependent)
+      run: |
+        dotnet publish Bruteforce/Bruteforce.csproj \
+          --configuration Release \
+          --output ./publish/crossplatform \
+          --no-self-contained
+
+    - name: Create crossplatform.zip
+      run: |
+        cd publish/crossplatform
+        zip -r ../../crossplatform.zip .
+        cd ../..
+
+    - name: Upload crossplatform build
+      uses: actions/upload-artifact@v4
+      with:
+        name: crossplatform-build
+        path: crossplatform.zip
+
+  build-linux:
+    needs: [build-cuda-libraries]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Download CUDA Libraries
+      uses: actions/download-artifact@v4
+      with:
+        name: cuda-libraries
+        path: Bruteforce/libs/
+
+    - name: Build Linux x64 Self-Contained
+      run: |
+        dotnet publish Bruteforce/Bruteforce.csproj \
+          --configuration Release \
+          --runtime linux-x64 \
+          --output ./publish/linux \
+          --self-contained true \
+          -p:PublishSingleFile=false
+
+    - name: Create linux.zip
+      run: |
+        cd publish/linux
+        zip -r ../../linux.zip .
+        cd ../..
+
+    - name: Upload Linux build
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-build
+        path: linux.zip
+
+  build-windows:
+    needs: [build-cuda-libraries-windows]
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Download Windows CUDA Libraries
+      uses: actions/download-artifact@v4
+      with:
+        name: cuda-libraries-windows
+        path: Bruteforce/libs/
+
+    - name: Build Windows x64 Self-Contained
+      run: |
+        dotnet publish Bruteforce/Bruteforce.csproj `
+          --configuration Release `
+          --runtime win-x64 `
+          --output ./publish/windows `
+          --self-contained true `
+          -p:PublishSingleFile=false
+
+    - name: Create windows.zip
+      run: |
+        cd publish/windows
+        Compress-Archive -Path * -DestinationPath ../../windows.zip
+        cd ../..
+
+    - name: Upload Windows build
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-build
+        path: windows.zip
+
+  test-windows:
+    needs: [build-cuda-libraries-windows]
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Setup CUDA
+      uses: Jimver/cuda-toolkit@v0.2.11
+      with:
+        cuda: '12.6.3'
+        method: 'network'
+
+    - name: Download Windows CUDA Libraries
+      uses: actions/download-artifact@v4
+      with:
+        name: cuda-libraries-windows
+        path: Bruteforce/libs/
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run Unit Tests on Windows
+      run: dotnet test Tests/Tests.csproj --no-build --verbosity normal --configuration Release
+
+    - name: Build Application for Windows Integration Tests
+      run: dotnet build Bruteforce/Bruteforce.csproj --configuration Release --no-restore
+
+    - name: Run Windows Integration Tests
+      run: |
+        cd Tests/bin/Release/net8.0
+
+        # Test CUDA functionality on Windows
+        echo "Testing CUDA functionality on Windows..."
+        ./bruteforce.exe brute -g TestData/Petukh.torrent TestData/Damaged/
+      shell: bash
+
+  create-release:
+    if: github.event_name == 'release'
+    needs: [test, test-windows, build-crossplatform, build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Upload Release Assets
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          crossplatform-build/crossplatform.zip
+          linux-build/linux.zip
+          windows-build/windows.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
