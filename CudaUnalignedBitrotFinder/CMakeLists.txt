@@ -13,38 +13,50 @@ target_compile_features(CudaUnalignedBitrotFinder
 )
 
 target_compile_definitions(CudaUnalignedBitrotFinder
-    INTERFACE
-        WIN32
-        WIN64
-        _CONSOLE
-        _MBCS
+    PRIVATE
         $<$<CONFIG:Debug>:_DEBUG>
         $<$<CONFIG:Release>:NDEBUG>
-    PRIVATE
-        LINUX
+        $<$<PLATFORM_ID:Windows>:WIN32;WIN64;_CONSOLE;_MBCS>
+        $<$<PLATFORM_ID:Linux>:LINUX>
 )
 
-target_link_libraries(CudaUnalignedBitrotFinder
-    INTERFACE
-        cudart_static.lib
-        kernel32.lib
-        user32.lib
-        gdi32.lib
-        winspool.lib
-        comdlg32.lib
-        advapi32.lib
-        shell32.lib
-        ole32.lib
-        oleaut32.lib
-        uuid.lib
-        odbc32.lib
-        odbccp32.lib
-)
+# Platform-specific link libraries
+if(WIN32)
+    target_link_libraries(CudaUnalignedBitrotFinder
+        PRIVATE
+            cudart_static
+            kernel32
+            user32
+            gdi32
+            winspool
+            comdlg32
+            advapi32
+            shell32
+            ole32
+            oleaut32
+            uuid
+            odbc32
+            odbccp32
+    )
+else()
+    target_link_libraries(CudaUnalignedBitrotFinder
+        PRIVATE
+            cudart_static
+    )
+endif()
 
-target_compile_options(CudaUnalignedBitrotFinder
-    INTERFACE
-        /W3
-)
+# Platform-specific compile options
+if(WIN32)
+    target_compile_options(CudaUnalignedBitrotFinder
+        PRIVATE
+            /W3
+    )
+else()
+    target_compile_options(CudaUnalignedBitrotFinder
+        PRIVATE
+            -Wall
+    )
+endif()
 
 set(CMAKE_CUDA_ARCHITECTURES "52")
 
