@@ -65,7 +65,8 @@
       <None Remove="Properties\launchSettings.json" />
     </ItemGroup>
     
-    <ItemGroup>
+    <!-- Only include CUDA project references when not in CI -->
+    <ItemGroup Condition="'$(CI)' != 'true'">
         <ProjectReference Include="..\CudaAlignedBitrotFinder/CudaAlignedBitrotFinder.vcxproj">
             <Project>{689208EA-24A1-48C5-9ACE-202640267B40}</Project>
             <Name>CudaAlignedBitrotFinder</Name>
@@ -76,7 +77,7 @@
         </ProjectReference>
     </ItemGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(CI)' != 'true'">
         <ProjectReference Include="..\CudaUnalignedBitrotFinder/CudaUnalignedBitrotFinder.vcxproj">
             <Project>{AC30D969-E8D4-43A5-9934-9B80310A01EE}</Project>
             <Name>CudaUnalignedBitrotFinder</Name>

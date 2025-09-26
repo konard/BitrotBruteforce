@@ -1,0 +1,66 @@
+build-linux	Build Linux Self-Contained	﻿2025-09-26T10:12:05.3993011Z ##[group]Run dotnet publish Bruteforce/Bruteforce.csproj \
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:05.3993518Z [36;1mdotnet publish Bruteforce/Bruteforce.csproj \[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:05.3993839Z [36;1m  -c Release \[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:05.3994066Z [36;1m  -r linux-x64 \[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:05.3994297Z [36;1m  -o publish/linux/publish \[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:05.3994564Z [36;1m  --self-contained true \[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:05.3995024Z [36;1m  -p:PublishSingleFile=true \[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:05.3995369Z [36;1m  -p:IncludeNativeLibrariesForSelfExtract=true \[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:05.3995716Z [36;1m  -p:CI=true[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:05.4031024Z shell: /usr/bin/bash -e {0}
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:05.4031289Z env:
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:05.4031478Z   DOTNET_ROOT: /usr/share/dotnet
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:05.4031721Z ##[endgroup]
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:11.7514403Z   Determining projects to restore...
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:13.9849025Z   Restored /home/runner/work/BitrotBruteforce/BitrotBruteforce/Bruteforce/Bruteforce.csproj (in 1.41 sec).
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:14.3689852Z /home/runner/work/BitrotBruteforce/BitrotBruteforce/CudaUnalignedBitrotFinder/CudaUnalignedBitrotFinder.vcxproj(18,3): error MSB4278: The imported file "$(VCTargetsPath)/Microsoft.Cpp.Default.props" does not exist and appears to be part of a Visual Studio component. This file may require MSBuild.exe in order to be imported successfully, and so may fail to build in the dotnet CLI. 
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:14.3695750Z /home/runner/work/BitrotBruteforce/BitrotBruteforce/CudaAlignedBitrotFinder/CudaAlignedBitrotFinder.vcxproj(18,3): error MSB4278: The imported file "$(VCTargetsPath)/Microsoft.Cpp.Default.props" does not exist and appears to be part of a Visual Studio component. This file may require MSBuild.exe in order to be imported successfully, and so may fail to build in the dotnet CLI. 
+build-linux	Build Linux Self-Contained	2025-09-26T10:12:14.4721309Z ##[error]Process completed with exit code 1.
+unit-tests	Run Unit Tests	﻿2025-09-26T10:11:58.9699433Z ##[group]Run dotnet test Tests/Tests.csproj -c Release --logger "console;verbosity=detailed" -p:CI=true
+unit-tests	Run Unit Tests	2025-09-26T10:11:58.9700360Z [36;1mdotnet test Tests/Tests.csproj -c Release --logger "console;verbosity=detailed" -p:CI=true[0m
+unit-tests	Run Unit Tests	2025-09-26T10:11:58.9738490Z shell: /usr/bin/bash -e {0}
+unit-tests	Run Unit Tests	2025-09-26T10:11:58.9738867Z env:
+unit-tests	Run Unit Tests	2025-09-26T10:11:58.9739157Z   DOTNET_ROOT: /usr/share/dotnet
+unit-tests	Run Unit Tests	2025-09-26T10:11:58.9739489Z ##[endgroup]
+unit-tests	Run Unit Tests	2025-09-26T10:12:05.2734129Z   Determining projects to restore...
+unit-tests	Run Unit Tests	2025-09-26T10:12:08.0853540Z   Restored /home/runner/work/BitrotBruteforce/BitrotBruteforce/Bruteforce/Bruteforce.csproj (in 1.38 sec).
+unit-tests	Run Unit Tests	2025-09-26T10:12:08.5375915Z   Restored /home/runner/work/BitrotBruteforce/BitrotBruteforce/Tests/Tests.csproj (in 1.84 sec).
+unit-tests	Run Unit Tests	2025-09-26T10:12:09.0987306Z /home/runner/work/BitrotBruteforce/BitrotBruteforce/CudaUnalignedBitrotFinder/CudaUnalignedBitrotFinder.vcxproj(18,3): error MSB4278: The imported file "$(VCTargetsPath)/Microsoft.Cpp.Default.props" does not exist and appears to be part of a Visual Studio component. This file may require MSBuild.exe in order to be imported successfully, and so may fail to build in the dotnet CLI. 
+unit-tests	Run Unit Tests	2025-09-26T10:12:09.0998265Z /home/runner/work/BitrotBruteforce/BitrotBruteforce/CudaAlignedBitrotFinder/CudaAlignedBitrotFinder.vcxproj(18,3): error MSB4278: The imported file "$(VCTargetsPath)/Microsoft.Cpp.Default.props" does not exist and appears to be part of a Visual Studio component. This file may require MSBuild.exe in order to be imported successfully, and so may fail to build in the dotnet CLI. 
+unit-tests	Run Unit Tests	2025-09-26T10:12:09.2686903Z ##[error]Process completed with exit code 1.
+build-windows	Build Windows Self-Contained	﻿2025-09-26T10:12:14.0360404Z ##[group]Run dotnet publish Bruteforce/Bruteforce.csproj `
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:14.0360896Z [36;1mdotnet publish Bruteforce/Bruteforce.csproj `[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:14.0361208Z [36;1m  -c Release `[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:14.0361395Z [36;1m  -r win-x64 `[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:14.0361610Z [36;1m  -o publish/windows/publish `[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:14.0361866Z [36;1m  --self-contained true `[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:14.0362101Z [36;1m  -p:PublishSingleFile=true `[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:14.0362395Z [36;1m  -p:IncludeNativeLibrariesForSelfExtract=true `[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:14.0362674Z [36;1m  -p:CI=true[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:14.0424799Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:14.0425103Z env:
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:14.0425270Z   DOTNET_ROOT: C:\Program Files\dotnet
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:14.0425502Z ##[endgroup]
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:26.7319609Z   Determining projects to restore...
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:37.5154231Z   Restored D:\a\BitrotBruteforce\BitrotBruteforce\Bruteforce\Bruteforce.csproj (in 8.21 sec).
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:38.1026090Z D:\a\BitrotBruteforce\BitrotBruteforce\CudaUnalignedBitrotFinder\CudaUnalignedBitrotFinder.vcxproj(18,3): error MSB4278: The imported file "$(VCTargetsPath)\Microsoft.Cpp.Default.props" does not exist and appears to be part of a Visual Studio component. This file may require MSBuild.exe in order to be imported successfully, and so may fail to build in the dotnet CLI. 
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:38.1037287Z D:\a\BitrotBruteforce\BitrotBruteforce\CudaAlignedBitrotFinder\CudaAlignedBitrotFinder.vcxproj(18,3): error MSB4278: The imported file "$(VCTargetsPath)\Microsoft.Cpp.Default.props" does not exist and appears to be part of a Visual Studio component. This file may require MSBuild.exe in order to be imported successfully, and so may fail to build in the dotnet CLI. 
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:38.1618149Z 
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:38.1619323Z Workload updates are available. Run `dotnet workload list` for more information.
+build-windows	Build Windows Self-Contained	2025-09-26T10:12:38.5573575Z ##[error]Process completed with exit code 1.
+build-crossplatform	Build Crossplatform	﻿2025-09-26T10:12:01.9691032Z ##[group]Run dotnet publish Bruteforce/Bruteforce.csproj \
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:01.9691553Z [36;1mdotnet publish Bruteforce/Bruteforce.csproj \[0m
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:01.9691874Z [36;1m  -c Release \[0m
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:01.9692121Z [36;1m  -o publish/crossplatform/publish \[0m
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:01.9692407Z [36;1m  --self-contained false \[0m
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:01.9692902Z [36;1m  -p:PublishSingleFile=false \[0m
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:01.9693194Z [36;1m  -p:CI=true[0m
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:01.9729082Z shell: /usr/bin/bash -e {0}
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:01.9729331Z env:
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:01.9729519Z   DOTNET_ROOT: /usr/share/dotnet
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:01.9729757Z ##[endgroup]
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:07.5552789Z   Determining projects to restore...
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:09.2514400Z   Restored /home/runner/work/BitrotBruteforce/BitrotBruteforce/Bruteforce/Bruteforce.csproj (in 821 ms).
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:09.6224927Z /home/runner/work/BitrotBruteforce/BitrotBruteforce/CudaUnalignedBitrotFinder/CudaUnalignedBitrotFinder.vcxproj(18,3): error MSB4278: The imported file "$(VCTargetsPath)/Microsoft.Cpp.Default.props" does not exist and appears to be part of a Visual Studio component. This file may require MSBuild.exe in order to be imported successfully, and so may fail to build in the dotnet CLI. 
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:09.6669018Z /home/runner/work/BitrotBruteforce/BitrotBruteforce/CudaAlignedBitrotFinder/CudaAlignedBitrotFinder.vcxproj(18,3): error MSB4278: The imported file "$(VCTargetsPath)/Microsoft.Cpp.Default.props" does not exist and appears to be part of a Visual Studio component. This file may require MSBuild.exe in order to be imported successfully, and so may fail to build in the dotnet CLI. 
+build-crossplatform	Build Crossplatform	2025-09-26T10:12:09.7219832Z ##[error]Process completed with exit code 1.
