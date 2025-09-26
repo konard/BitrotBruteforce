@@ -16,16 +16,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v3
 
     - name: Build CUDA libraries for Linux
       run: |
+        mkdir -p Bruteforce/libs
         docker run --rm -v $PWD:/app nvidia/cuda:12.6.3-cudnn-devel-ubuntu24.04 bash -c "
           apt-get update &&
           apt-get install -y cmake build-essential &&
+          mkdir -p /app/Bruteforce/libs &&
           cd /app/CudaAlignedBitrotFinder/ &&
           rm -rf build || true &&
           mkdir build &&
@@ -48,7 +50,7 @@ jobs:
         ls -la Bruteforce/libs/*.dll || true
 
     - name: Upload CUDA libraries artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: cuda-libraries
         path: |
@@ -60,15 +62,15 @@ jobs:
     needs: build-cuda-libraries
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
 
     - name: Download CUDA libraries
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: cuda-libraries
         path: Bruteforce/libs
@@ -90,7 +92,7 @@ jobs:
         zip -r crossplatform.zip crossplatform/
 
     - name: Upload crossplatform artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: crossplatform
         path: publish/crossplatform.zip
@@ -100,15 +102,15 @@ jobs:
     needs: build-cuda-libraries
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
 
     - name: Download CUDA libraries
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: cuda-libraries
         path: Bruteforce/libs
@@ -135,7 +137,7 @@ jobs:
         zip -r linux.zip linux/
 
     - name: Upload linux artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: linux
         path: publish/linux.zip
@@ -145,15 +147,15 @@ jobs:
     needs: build-cuda-libraries
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
 
     - name: Download CUDA libraries
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: cuda-libraries
         path: Bruteforce/libs
@@ -181,7 +183,7 @@ jobs:
       shell: pwsh
 
     - name: Upload windows artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: windows
         path: publish/windows.zip
@@ -191,15 +193,15 @@ jobs:
     needs: build-cuda-libraries
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
 
     - name: Download CUDA libraries
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: cuda-libraries
         path: Bruteforce/libs
@@ -212,10 +214,10 @@ jobs:
     needs: [build-linux]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Download Linux build
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: linux
         path: .
@@ -253,10 +255,10 @@ jobs:
     needs: [build-windows]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Download Windows build
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: windows
         path: .
@@ -305,15 +307,15 @@ jobs:
     needs: [build-crossplatform]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
 
     - name: Download Crossplatform build
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: crossplatform
         path: .
@@ -343,19 +345,19 @@ jobs:
 
     steps:
     - name: Download crossplatform artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: crossplatform
         path: .
 
     - name: Download linux artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: linux
         path: .
 
     - name: Download windows artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: windows
         path: .

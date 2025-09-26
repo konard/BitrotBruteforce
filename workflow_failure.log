@@ -1,0 +1,40 @@
+build-cuda-libraries	Set up job	﻿2025-09-26T10:03:14.6957021Z Current runner version: '2.328.0'
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6982915Z ##[group]Runner Image Provisioner
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6983704Z Hosted Compute Agent
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6984348Z Version: 20250912.392
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6984929Z Commit: d921fda672a98b64f4f82364647e2f10b2267d0b
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6985617Z Build Date: 2025-09-12T15:23:14Z
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6986238Z ##[endgroup]
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6986816Z ##[group]Operating System
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6987351Z Ubuntu
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6988034Z 24.04.3
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6988508Z LTS
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6988968Z ##[endgroup]
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6989410Z ##[group]Runner Image
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6990061Z Image: ubuntu-24.04
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6990584Z Version: 20250922.53.1
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6991535Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250922.53/images/ubuntu/Ubuntu2404-Readme.md
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6992948Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250922.53
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6994142Z ##[endgroup]
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6996619Z ##[group]GITHUB_TOKEN Permissions
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.6999791Z Actions: write
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7000727Z Attestations: write
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7001308Z Checks: write
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7001794Z Contents: write
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7002351Z Deployments: write
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7002956Z Discussions: write
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7003481Z Issues: write
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7004043Z Metadata: read
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7004511Z Models: read
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7005008Z Packages: write
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7005510Z Pages: write
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7006023Z PullRequests: write
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7006612Z RepositoryProjects: write
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7007178Z SecurityEvents: write
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7008228Z Statuses: write
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7008755Z ##[endgroup]
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7011398Z Secret source: Actions
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7012369Z Prepare workflow directory
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7347161Z Prepare all required actions
+build-cuda-libraries	Set up job	2025-09-26T10:03:14.7386758Z Getting action download info
+build-cuda-libraries	Set up job	2025-09-26T10:03:15.1421308Z ##[error]This request has been automatically failed because it uses a deprecated version of `actions/upload-artifact: v3`. Learn more: https://github.blog/changelog/2024-04-16-deprecation-notice-v3-of-the-artifact-actions/
