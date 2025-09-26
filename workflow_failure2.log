@@ -1,0 +1,73 @@
+build-crossplatform	Build Crossplatform	﻿2025-09-26T10:07:35.3175287Z ##[group]Run dotnet publish Bruteforce/Bruteforce.csproj \
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:35.3175800Z [36;1mdotnet publish Bruteforce/Bruteforce.csproj \[0m
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:35.3176119Z [36;1m  -c Release \[0m
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:35.3176381Z [36;1m  -o publish/crossplatform/publish \[0m
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:35.3176904Z [36;1m  --self-contained false \[0m
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:35.3177460Z [36;1m  -p:PublishSingleFile=false[0m
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:35.3213526Z shell: /usr/bin/bash -e {0}
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:35.3213785Z env:
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:35.3213971Z   DOTNET_ROOT: /usr/share/dotnet
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:35.3214202Z ##[endgroup]
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:41.8811717Z   Determining projects to restore...
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:43.6214842Z   Restored /home/runner/work/BitrotBruteforce/BitrotBruteforce/Bruteforce/Bruteforce.csproj (in 804 ms).
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:43.9333538Z   /usr/bin/sh: 2: /tmp/MSBuildTemprunner/tmpc64bb35c59a84a09a8f06716e7d7e12c.exec.cmd: powershell: not found
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:43.9369603Z /home/runner/work/BitrotBruteforce/BitrotBruteforce/Bruteforce/Bruteforce.csproj(91,9): error MSB3073: The command "powershell -ExecutionPolicy Bypass -File /home/runner/work/BitrotBruteforce/BitrotBruteforce/Bruteforce/buildCuda.ps1" exited with code 127.
+build-crossplatform	Build Crossplatform	2025-09-26T10:07:44.0474852Z ##[error]Process completed with exit code 1.
+unit-tests	Run Unit Tests	﻿2025-09-26T10:07:32.1511212Z ##[group]Run dotnet test Tests/Tests.csproj -c Release --logger "console;verbosity=detailed"
+unit-tests	Run Unit Tests	2025-09-26T10:07:32.1511923Z [36;1mdotnet test Tests/Tests.csproj -c Release --logger "console;verbosity=detailed"[0m
+unit-tests	Run Unit Tests	2025-09-26T10:07:32.1548699Z shell: /usr/bin/bash -e {0}
+unit-tests	Run Unit Tests	2025-09-26T10:07:32.1549057Z env:
+unit-tests	Run Unit Tests	2025-09-26T10:07:32.1549255Z   DOTNET_ROOT: /usr/share/dotnet
+unit-tests	Run Unit Tests	2025-09-26T10:07:32.1549515Z ##[endgroup]
+unit-tests	Run Unit Tests	2025-09-26T10:07:35.8694871Z   Determining projects to restore...
+unit-tests	Run Unit Tests	2025-09-26T10:07:37.5469374Z   Restored /home/runner/work/BitrotBruteforce/BitrotBruteforce/Bruteforce/Bruteforce.csproj (in 832 ms).
+unit-tests	Run Unit Tests	2025-09-26T10:07:39.1006304Z   Restored /home/runner/work/BitrotBruteforce/BitrotBruteforce/Tests/Tests.csproj (in 2.4 sec).
+unit-tests	Run Unit Tests	2025-09-26T10:07:39.6040735Z   /usr/bin/sh: 2: /tmp/MSBuildTemprunner/tmp83a7e16d40e34ea8b43cf2e50289e0e8.exec.cmd: powershell: not found
+unit-tests	Run Unit Tests	2025-09-26T10:07:39.6074035Z /home/runner/work/BitrotBruteforce/BitrotBruteforce/Bruteforce/Bruteforce.csproj(91,9): error MSB3073: The command "powershell -ExecutionPolicy Bypass -File /home/runner/work/BitrotBruteforce/BitrotBruteforce/Bruteforce/buildCuda.ps1" exited with code 127.
+unit-tests	Run Unit Tests	2025-09-26T10:07:39.6676228Z ##[error]Process completed with exit code 1.
+build-linux	Build Linux Self-Contained	﻿2025-09-26T10:07:35.4479334Z ##[group]Run dotnet publish Bruteforce/Bruteforce.csproj \
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:35.4479910Z [36;1mdotnet publish Bruteforce/Bruteforce.csproj \[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:35.4480229Z [36;1m  -c Release \[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:35.4480802Z [36;1m  -r linux-x64 \[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:35.4481046Z [36;1m  -o publish/linux/publish \[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:35.4481309Z [36;1m  --self-contained true \[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:35.4481770Z [36;1m  -p:PublishSingleFile=true \[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:35.4482086Z [36;1m  -p:IncludeNativeLibrariesForSelfExtract=true[0m
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:35.4516432Z shell: /usr/bin/bash -e {0}
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:35.4516676Z env:
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:35.4516857Z   DOTNET_ROOT: /usr/share/dotnet
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:35.4517085Z ##[endgroup]
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:40.2920770Z   Determining projects to restore...
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:43.2375617Z   Restored /home/runner/work/BitrotBruteforce/BitrotBruteforce/Bruteforce/Bruteforce.csproj (in 2.06 sec).
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:43.5584574Z   /usr/bin/sh: 2: /tmp/MSBuildTemprunner/tmp8fa7cf033a8a4f0d94b78b1d60a19984.exec.cmd: powershell: not found
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:43.5618232Z /home/runner/work/BitrotBruteforce/BitrotBruteforce/Bruteforce/Bruteforce.csproj(91,9): error MSB3073: The command "powershell -ExecutionPolicy Bypass -File /home/runner/work/BitrotBruteforce/BitrotBruteforce/Bruteforce/buildCuda.ps1" exited with code 127.
+build-linux	Build Linux Self-Contained	2025-09-26T10:07:43.6221843Z ##[error]Process completed with exit code 1.
+build-windows	Build Windows Self-Contained	﻿2025-09-26T10:07:48.2901395Z ##[group]Run dotnet publish Bruteforce/Bruteforce.csproj `
+build-windows	Build Windows Self-Contained	2025-09-26T10:07:48.2901873Z [36;1mdotnet publish Bruteforce/Bruteforce.csproj `[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:07:48.2902171Z [36;1m  -c Release `[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:07:48.2902350Z [36;1m  -r win-x64 `[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:07:48.2902548Z [36;1m  -o publish/windows/publish `[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:07:48.2902799Z [36;1m  --self-contained true `[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:07:48.2903027Z [36;1m  -p:PublishSingleFile=true `[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:07:48.2903316Z [36;1m  -p:IncludeNativeLibrariesForSelfExtract=true[0m
+build-windows	Build Windows Self-Contained	2025-09-26T10:07:48.2967055Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build-windows	Build Windows Self-Contained	2025-09-26T10:07:48.2967626Z env:
+build-windows	Build Windows Self-Contained	2025-09-26T10:07:48.2967802Z   DOTNET_ROOT: C:\Program Files\dotnet
+build-windows	Build Windows Self-Contained	2025-09-26T10:07:48.2968018Z ##[endgroup]
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:01.2053151Z   Determining projects to restore...
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:12.1870080Z   Restored D:\a\BitrotBruteforce\BitrotBruteforce\Bruteforce\Bruteforce.csproj (in 8.44 sec).
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:12.9581996Z   
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:16.5449157Z   Unable to find image 'nvidia/cuda:12.6.3-cudnn-devel-ubuntu24.04' locally
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:17.1935073Z   12.6.3-cudnn-devel-ubuntu24.04: Pulling from nvidia/cuda
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:17.1936861Z   docker: no matching manifest for windows/amd64 10.0.26100 in the manifest list entries.
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:17.1940256Z   See 'docker run --help'.
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:17.1981065Z   Path                                             
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:17.1983764Z   ----                                             
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:17.1985157Z   D:\a\BitrotBruteforce\BitrotBruteforce\Bruteforce
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:17.1987034Z   
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:17.1988708Z   
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:17.3193231Z D:\a\BitrotBruteforce\BitrotBruteforce\CudaUnalignedBitrotFinder\CudaUnalignedBitrotFinder.vcxproj(18,3): error MSB4278: The imported file "$(VCTargetsPath)\Microsoft.Cpp.Default.props" does not exist and appears to be part of a Visual Studio component. This file may require MSBuild.exe in order to be imported successfully, and so may fail to build in the dotnet CLI. 
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:17.3201879Z D:\a\BitrotBruteforce\BitrotBruteforce\CudaAlignedBitrotFinder\CudaAlignedBitrotFinder.vcxproj(18,3): error MSB4278: The imported file "$(VCTargetsPath)\Microsoft.Cpp.Default.props" does not exist and appears to be part of a Visual Studio component. This file may require MSBuild.exe in order to be imported successfully, and so may fail to build in the dotnet CLI. 
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:17.3740845Z 
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:17.3741630Z Workload updates are available. Run `dotnet workload list` for more information.
+build-windows	Build Windows Self-Contained	2025-09-26T10:08:17.5059192Z ##[error]Process completed with exit code 1.

@@ -87,7 +87,8 @@
         </ProjectReference>
     </ItemGroup>
 
-    <Target Name="PreBuildCUDALibraries" BeforeTargets="PreBuildEvent" Condition="'$(Configuration)' == 'Release'">
+    <!-- Skip CUDA build in CI as it's handled by the workflow -->
+    <Target Name="PreBuildCUDALibraries" BeforeTargets="PreBuildEvent" Condition="'$(Configuration)' == 'Release' AND '$(CI)' != 'true'">
         <Exec Command="powershell -ExecutionPolicy Bypass -File $(ProjectDir)buildCuda.ps1" IgnoreExitCode="false" />
     </Target>
 

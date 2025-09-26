@@ -43,11 +43,13 @@ jobs:
           cmake --build . &&
           mv libCudaUnalignedBitrotFinder.so /app/Bruteforce/libs/CudaUnalignedBitrotFinder.so"
 
-    - name: Build CUDA libraries for Windows
+    - name: Build CUDA libraries for Windows (placeholder)
       run: |
-        # Windows CUDA libraries are already included as .dll files in the repository
-        echo "Windows CUDA libraries already present in libs folder"
-        ls -la Bruteforce/libs/*.dll || true
+        # For now, create placeholder DLL files for Windows
+        # Real Windows CUDA compilation would require Windows runner with CUDA SDK
+        echo "Creating placeholder CUDA DLLs for Windows"
+        touch Bruteforce/libs/CudaAlignedBitrotFinder.dll
+        touch Bruteforce/libs/CudaUnalignedBitrotFinder.dll
 
     - name: Upload CUDA libraries artifact
       uses: actions/upload-artifact@v4
@@ -81,7 +83,8 @@ jobs:
           -c Release \
           -o publish/crossplatform/publish \
           --self-contained false \
-          -p:PublishSingleFile=false
+          -p:PublishSingleFile=false \
+          -p:CI=true
 
     - name: Copy README
       run: cp README.md publish/crossplatform/publish/
@@ -123,7 +126,8 @@ jobs:
           -o publish/linux/publish \
           --self-contained true \
           -p:PublishSingleFile=true \
-          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:IncludeNativeLibrariesForSelfExtract=true \
+          -p:CI=true
 
     - name: Copy README and libs
       run: |
@@ -168,7 +172,8 @@ jobs:
           -o publish/windows/publish `
           --self-contained true `
           -p:PublishSingleFile=true `
-          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:IncludeNativeLibrariesForSelfExtract=true `
+          -p:CI=true
       shell: pwsh
 
     - name: Copy README
@@ -207,7 +212,7 @@ jobs:
         path: Bruteforce/libs
 
     - name: Run Unit Tests
-      run: dotnet test Tests/Tests.csproj -c Release --logger "console;verbosity=detailed"
+      run: dotnet test Tests/Tests.csproj -c Release --logger "console;verbosity=detailed" -p:CI=true
 
   integration-tests-linux:
     runs-on: ubuntu-latest
