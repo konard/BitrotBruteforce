@@ -12,56 +12,111 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-cuda-libraries:
-    runs-on: ubuntu-latest
+  build-cuda-libraries-linux:
+    runs-on: [gpu-t4]
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential
+
+    - name: Verify CUDA installation
+      run: |
+        nvidia-smi
+        nvcc --version || echo "nvcc not in PATH, will add CUDA to PATH"
+
+    - name: Setup CUDA environment
+      run: |
+        # Add CUDA to PATH if not already present
+        if ! command -v nvcc &> /dev/null; then
+          echo "export PATH=/usr/local/cuda/bin:$PATH" >> $GITHUB_ENV
+          echo "export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        fi
 
     - name: Build CUDA libraries for Linux
       run: |
         mkdir -p Bruteforce/libs
-        docker run --rm -v $PWD:/app nvidia/cuda:12.6.3-cudnn-devel-ubuntu24.04 bash -c "
-          apt-get update &&
-          apt-get install -y cmake build-essential &&
-          mkdir -p /app/Bruteforce/libs &&
-          cd /app/CudaAlignedBitrotFinder/ &&
-          rm -rf build || true &&
-          mkdir build &&
-          cd build &&
-          cmake .. &&
-          cmake --build . &&
-          mv libCudaAlignedBitrotFinder.so /app/Bruteforce/libs/CudaAlignedBitrotFinder.so &&
-          cd /app/CudaUnalignedBitrotFinder/ &&
-          rm -rf build || true &&
-          mkdir build &&
-          cd build &&
-          cmake .. &&
-          cmake --build . &&
-          mv libCudaUnalignedBitrotFinder.so /app/Bruteforce/libs/CudaUnalignedBitrotFinder.so"
 
-    - name: Build CUDA libraries for Windows (placeholder)
-      run: |
-        # For now, create placeholder DLL files for Windows
-        # Real Windows CUDA compilation would require Windows runner with CUDA SDK
-        echo "Creating placeholder CUDA DLLs for Windows"
-        touch Bruteforce/libs/CudaAlignedBitrotFinder.dll
-        touch Bruteforce/libs/CudaUnalignedBitrotFinder.dll
+        # Build CudaAlignedBitrotFinder
+        cd CudaAlignedBitrotFinder/
+        rm -rf build || true
+        mkdir build
+        cd build
+        cmake ..
+        cmake --build .
+        mv libCudaAlignedBitrotFinder.so ../../Bruteforce/libs/CudaAlignedBitrotFinder.so
 
-    - name: Upload CUDA libraries artifact
+        # Build CudaUnalignedBitrotFinder
+        cd ../../CudaUnalignedBitrotFinder/
+        rm -rf build || true
+        mkdir build
+        cd build
+        cmake ..
+        cmake --build .
+        mv libCudaUnalignedBitrotFinder.so ../../Bruteforce/libs/CudaUnalignedBitrotFinder.so
+
+    - name: Upload Linux CUDA libraries
       uses: actions/upload-artifact@v4
       with:
-        name: cuda-libraries
-        path: |
-          Bruteforce/libs/*.dll
-          Bruteforce/libs/*.so
+        name: cuda-libraries-linux
+        path: Bruteforce/libs/*.so
+
+  build-cuda-libraries-windows:
+    runs-on: [windows-latest, gpu-t4]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup CUDA on Windows
+      run: |
+        # Verify CUDA installation
+        nvidia-smi
+        nvcc --version || echo "NVCC not found, will setup CUDA"
+      shell: pwsh
+
+    - name: Install Visual Studio Build Tools
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: '3.28.x'
+
+    - name: Build CUDA libraries for Windows
+      run: |
+        New-Item -ItemType Directory -Force -Path "Bruteforce/libs"
+
+        # Build CudaAlignedBitrotFinder
+        Set-Location -Path "CudaAlignedBitrotFinder"
+        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        New-Item -ItemType Directory -Force -Path "build"
+        Set-Location -Path "build"
+        cmake .. -G "Visual Studio 17 2022" -A x64
+        cmake --build . --config Release
+        Move-Item "Release/CudaAlignedBitrotFinder.dll" "../../Bruteforce/libs/CudaAlignedBitrotFinder.dll"
+
+        # Build CudaUnalignedBitrotFinder
+        Set-Location -Path "../../CudaUnalignedBitrotFinder"
+        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        New-Item -ItemType Directory -Force -Path "build"
+        Set-Location -Path "build"
+        cmake .. -G "Visual Studio 17 2022" -A x64
+        cmake --build . --config Release
+        Move-Item "Release/CudaUnalignedBitrotFinder.dll" "../../Bruteforce/libs/CudaUnalignedBitrotFinder.dll"
+      shell: pwsh
+
+    - name: Upload Windows CUDA libraries
+      uses: actions/upload-artifact@v4
+      with:
+        name: cuda-libraries-windows
+        path: Bruteforce/libs/*.dll
 
   build-crossplatform:
     runs-on: ubuntu-latest
-    needs: build-cuda-libraries
+    needs: [build-cuda-libraries-linux, build-cuda-libraries-windows]
 
     steps:
     - uses: actions/checkout@v4
@@ -71,10 +126,16 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Download CUDA libraries
+    - name: Download Linux CUDA libraries
       uses: actions/download-artifact@v4
       with:
-        name: cuda-libraries
+        name: cuda-libraries-linux
+        path: Bruteforce/libs
+
+    - name: Download Windows CUDA libraries
+      uses: actions/download-artifact@v4
+      with:
+        name: cuda-libraries-windows
         path: Bruteforce/libs
 
     - name: Build Crossplatform
@@ -102,7 +163,7 @@ jobs:
 
   build-linux:
     runs-on: ubuntu-latest
-    needs: build-cuda-libraries
+    needs: [build-cuda-libraries-linux, build-cuda-libraries-windows]
 
     steps:
     - uses: actions/checkout@v4
@@ -112,10 +173,16 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Download CUDA libraries
+    - name: Download Linux CUDA libraries
       uses: actions/download-artifact@v4
       with:
-        name: cuda-libraries
+        name: cuda-libraries-linux
+        path: Bruteforce/libs
+
+    - name: Download Windows CUDA libraries
+      uses: actions/download-artifact@v4
+      with:
+        name: cuda-libraries-windows
         path: Bruteforce/libs
 
     - name: Build Linux Self-Contained
@@ -148,7 +215,7 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
-    needs: build-cuda-libraries
+    needs: [build-cuda-libraries-linux, build-cuda-libraries-windows]
 
     steps:
     - uses: actions/checkout@v4
@@ -158,10 +225,16 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Download CUDA libraries
+    - name: Download Linux CUDA libraries
       uses: actions/download-artifact@v4
       with:
-        name: cuda-libraries
+        name: cuda-libraries-linux
+        path: Bruteforce/libs
+
+    - name: Download Windows CUDA libraries
+      uses: actions/download-artifact@v4
+      with:
+        name: cuda-libraries-windows
         path: Bruteforce/libs
 
     - name: Build Windows Self-Contained
@@ -195,7 +268,7 @@ jobs:
 
   unit-tests:
     runs-on: ubuntu-latest
-    needs: build-cuda-libraries
+    needs: [build-cuda-libraries-linux, build-cuda-libraries-windows]
 
     steps:
     - uses: actions/checkout@v4
@@ -205,10 +278,16 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Download CUDA libraries
+    - name: Download Linux CUDA libraries
       uses: actions/download-artifact@v4
       with:
-        name: cuda-libraries
+        name: cuda-libraries-linux
+        path: Bruteforce/libs
+
+    - name: Download Windows CUDA libraries
+      uses: actions/download-artifact@v4
+      with:
+        name: cuda-libraries-windows
         path: Bruteforce/libs
 
     - name: Run Unit Tests
@@ -246,14 +325,14 @@ jobs:
         ./linux/publish/Bruteforce brute -r ./Tests/TestData/Petukh.torrent ./Tests/TestData/DamagedCopy
         ./linux/publish/Bruteforce brute ./Tests/TestData/Petukh.torrent ./Tests/TestData/DamagedCopy
 
-    - name: Test - CUDA on Linux (if available)
+    - name: Test - Check CUDA availability (CPU runner)
       run: |
         if nvidia-smi > /dev/null 2>&1; then
+          echo "GPU detected on CPU runner (unexpected)"
           ./linux/publish/Bruteforce brute -g ./Tests/TestData/Petukh.torrent ./Tests/TestData/Damaged
         else
-          echo "CUDA not available, skipping CUDA test"
+          echo "No GPU on CPU runner (expected - GPU tests run in dedicated gpu-integration-tests-linux job)"
         fi
-      continue-on-error: true
 
   integration-tests-windows:
     runs-on: windows-latest
@@ -290,22 +369,22 @@ jobs:
         .\windows\publish\Bruteforce.exe brute .\Tests\TestData\Petukh.torrent .\Tests\TestData\DamagedCopy
       shell: pwsh
 
-    - name: Test - CUDA on Windows (if available)
+    - name: Test - Check CUDA availability (CPU runner)
       run: |
         $cudaAvailable = $false
         try {
           nvidia-smi | Out-Null
           $cudaAvailable = $true
         } catch {
-          Write-Output "CUDA not available"
+          Write-Output "No GPU on CPU runner (expected)"
         }
         if ($cudaAvailable) {
+          Write-Output "GPU detected on CPU runner (unexpected)"
           .\windows\publish\Bruteforce.exe brute -g .\Tests\TestData\Petukh.torrent .\Tests\TestData\Damaged
         } else {
-          Write-Output "CUDA not available, skipping CUDA test"
+          Write-Output "GPU tests run in dedicated gpu-integration-tests-windows job"
         }
       shell: pwsh
-      continue-on-error: true
 
   integration-tests-crossplatform:
     runs-on: ubuntu-latest
@@ -343,9 +422,89 @@ jobs:
         dotnet crossplatform/publish/Bruteforce.dll brute -r ./Tests/TestData/Petukh.torrent ./Tests/TestData/DamagedCopy
         dotnet crossplatform/publish/Bruteforce.dll brute ./Tests/TestData/Petukh.torrent ./Tests/TestData/DamagedCopy
 
+  gpu-integration-tests-linux:
+    runs-on: [gpu-t4]
+    needs: [build-linux]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download Linux build
+      uses: actions/download-artifact@v4
+      with:
+        name: linux
+        path: .
+
+    - name: Extract Linux build
+      run: |
+        unzip -q linux.zip
+        chmod +x linux/publish/Bruteforce
+
+    - name: Verify GPU availability
+      run: |
+        nvidia-smi
+        echo "CUDA devices available:"
+        nvidia-smi -L
+
+    - name: Test - CUDA bitrot search
+      run: |
+        ./linux/publish/Bruteforce brute -g ./Tests/TestData/Petukh.torrent ./Tests/TestData/Damaged
+
+    - name: Test - CUDA file integrity check
+      run: |
+        ./linux/publish/Bruteforce brute -g ./Tests/TestData/Petukh.torrent ./Tests/TestData/Undamaged
+
+    - name: Test - CUDA file recovery
+      run: |
+        cp -r ./Tests/TestData/Damaged ./Tests/TestData/DamagedCopy
+        ./linux/publish/Bruteforce brute -g -r ./Tests/TestData/Petukh.torrent ./Tests/TestData/DamagedCopy
+        ./linux/publish/Bruteforce brute -g ./Tests/TestData/Petukh.torrent ./Tests/TestData/DamagedCopy
+
+  gpu-integration-tests-windows:
+    runs-on: [windows-latest, gpu-t4]
+    needs: [build-windows]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download Windows build
+      uses: actions/download-artifact@v4
+      with:
+        name: windows
+        path: .
+
+    - name: Extract Windows build
+      run: |
+        Expand-Archive -Path windows.zip -DestinationPath . -Force
+      shell: pwsh
+
+    - name: Verify GPU availability
+      run: |
+        nvidia-smi
+        Write-Output "CUDA devices available:"
+        nvidia-smi -L
+      shell: pwsh
+
+    - name: Test - CUDA bitrot search
+      run: |
+        .\windows\publish\Bruteforce.exe brute -g .\Tests\TestData\Petukh.torrent .\Tests\TestData\Damaged
+      shell: pwsh
+
+    - name: Test - CUDA file integrity check
+      run: |
+        .\windows\publish\Bruteforce.exe brute -g .\Tests\TestData\Petukh.torrent .\Tests\TestData\Undamaged
+      shell: pwsh
+
+    - name: Test - CUDA file recovery
+      run: |
+        Copy-Item -Path .\Tests\TestData\Damaged -Destination .\Tests\TestData\DamagedCopy -Recurse
+        .\windows\publish\Bruteforce.exe brute -g -r .\Tests\TestData\Petukh.torrent .\Tests\TestData\DamagedCopy
+        .\windows\publish\Bruteforce.exe brute -g .\Tests\TestData\Petukh.torrent .\Tests\TestData\DamagedCopy
+      shell: pwsh
+
   release:
     runs-on: ubuntu-latest
-    needs: [build-crossplatform, build-linux, build-windows, unit-tests, integration-tests-linux, integration-tests-windows, integration-tests-crossplatform]
+    needs: [build-crossplatform, build-linux, build-windows, unit-tests, integration-tests-linux, integration-tests-windows, integration-tests-crossplatform, gpu-integration-tests-linux, gpu-integration-tests-windows]
     if: startsWith(github.ref, 'refs/tags/')
 
     steps:
