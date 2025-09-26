@@ -1,5 +1,7 @@
 name: Build and Test
 
+# This workflow runs on pull requests (including from forks) and pushes to master/main
+# It builds all three required artifacts and runs comprehensive tests
 on:
   push:
     branches: [ master, main ]
