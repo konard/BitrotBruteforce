@@ -1,0 +1,370 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ master, main ]
+    tags:
+      - '*'
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  build-cuda-libraries:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Build CUDA libraries for Linux
+      run: |
+        docker run --rm -v $PWD:/app nvidia/cuda:12.6.3-cudnn-devel-ubuntu24.04 bash -c "
+          apt-get update &&
+          apt-get install -y cmake build-essential &&
+          cd /app/CudaAlignedBitrotFinder/ &&
+          rm -rf build || true &&
+          mkdir build &&
+          cd build &&
+          cmake .. &&
+          cmake --build . &&
+          mv libCudaAlignedBitrotFinder.so /app/Bruteforce/libs/CudaAlignedBitrotFinder.so &&
+          cd /app/CudaUnalignedBitrotFinder/ &&
+          rm -rf build || true &&
+          mkdir build &&
+          cd build &&
+          cmake .. &&
+          cmake --build . &&
+          mv libCudaUnalignedBitrotFinder.so /app/Bruteforce/libs/CudaUnalignedBitrotFinder.so"
+
+    - name: Build CUDA libraries for Windows
+      run: |
+        # Windows CUDA libraries are already included as .dll files in the repository
+        echo "Windows CUDA libraries already present in libs folder"
+        ls -la Bruteforce/libs/*.dll || true
+
+    - name: Upload CUDA libraries artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: cuda-libraries
+        path: |
+          Bruteforce/libs/*.dll
+          Bruteforce/libs/*.so
+
+  build-crossplatform:
+    runs-on: ubuntu-latest
+    needs: build-cuda-libraries
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Download CUDA libraries
+      uses: actions/download-artifact@v3
+      with:
+        name: cuda-libraries
+        path: Bruteforce/libs
+
+    - name: Build Crossplatform
+      run: |
+        dotnet publish Bruteforce/Bruteforce.csproj \
+          -c Release \
+          -o publish/crossplatform/publish \
+          --self-contained false \
+          -p:PublishSingleFile=false
+
+    - name: Copy README
+      run: cp README.md publish/crossplatform/publish/
+
+    - name: Create crossplatform.zip
+      run: |
+        cd publish
+        zip -r crossplatform.zip crossplatform/
+
+    - name: Upload crossplatform artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: crossplatform
+        path: publish/crossplatform.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    needs: build-cuda-libraries
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Download CUDA libraries
+      uses: actions/download-artifact@v3
+      with:
+        name: cuda-libraries
+        path: Bruteforce/libs
+
+    - name: Build Linux Self-Contained
+      run: |
+        dotnet publish Bruteforce/Bruteforce.csproj \
+          -c Release \
+          -r linux-x64 \
+          -o publish/linux/publish \
+          --self-contained true \
+          -p:PublishSingleFile=true \
+          -p:IncludeNativeLibrariesForSelfExtract=true
+
+    - name: Copy README and libs
+      run: |
+        cp README.md publish/linux/publish/
+        mkdir -p publish/linux/publish/libs
+        cp Bruteforce/libs/*.dll publish/linux/publish/libs/
+
+    - name: Create linux.zip
+      run: |
+        cd publish
+        zip -r linux.zip linux/
+
+    - name: Upload linux artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux
+        path: publish/linux.zip
+
+  build-windows:
+    runs-on: windows-latest
+    needs: build-cuda-libraries
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Download CUDA libraries
+      uses: actions/download-artifact@v3
+      with:
+        name: cuda-libraries
+        path: Bruteforce/libs
+
+    - name: Build Windows Self-Contained
+      run: |
+        dotnet publish Bruteforce/Bruteforce.csproj `
+          -c Release `
+          -r win-x64 `
+          -o publish/windows/publish `
+          --self-contained true `
+          -p:PublishSingleFile=true `
+          -p:IncludeNativeLibrariesForSelfExtract=true
+      shell: pwsh
+
+    - name: Copy README
+      run: |
+        copy README.md publish\windows\publish\
+      shell: cmd
+
+    - name: Create windows.zip
+      run: |
+        cd publish
+        Compress-Archive -Path windows/* -DestinationPath windows.zip
+      shell: pwsh
+
+    - name: Upload windows artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows
+        path: publish/windows.zip
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: build-cuda-libraries
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Download CUDA libraries
+      uses: actions/download-artifact@v3
+      with:
+        name: cuda-libraries
+        path: Bruteforce/libs
+
+    - name: Run Unit Tests
+      run: dotnet test Tests/Tests.csproj -c Release --logger "console;verbosity=detailed"
+
+  integration-tests-linux:
+    runs-on: ubuntu-latest
+    needs: [build-linux]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Download Linux build
+      uses: actions/download-artifact@v3
+      with:
+        name: linux
+        path: .
+
+    - name: Extract Linux build
+      run: |
+        unzip -q linux.zip
+        chmod +x linux/publish/Bruteforce
+
+    - name: Test - Check bitrot index search
+      run: |
+        ./linux/publish/Bruteforce brute ./Tests/TestData/Petukh.torrent ./Tests/TestData/Damaged
+
+    - name: Test - Check file integrity
+      run: |
+        ./linux/publish/Bruteforce brute ./Tests/TestData/Petukh.torrent ./Tests/TestData/Undamaged
+
+    - name: Test - File recovery
+      run: |
+        cp -r ./Tests/TestData/Damaged ./Tests/TestData/DamagedCopy
+        ./linux/publish/Bruteforce brute -r ./Tests/TestData/Petukh.torrent ./Tests/TestData/DamagedCopy
+        ./linux/publish/Bruteforce brute ./Tests/TestData/Petukh.torrent ./Tests/TestData/DamagedCopy
+
+    - name: Test - CUDA on Linux (if available)
+      run: |
+        if nvidia-smi > /dev/null 2>&1; then
+          ./linux/publish/Bruteforce brute -g ./Tests/TestData/Petukh.torrent ./Tests/TestData/Damaged
+        else
+          echo "CUDA not available, skipping CUDA test"
+        fi
+      continue-on-error: true
+
+  integration-tests-windows:
+    runs-on: windows-latest
+    needs: [build-windows]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Download Windows build
+      uses: actions/download-artifact@v3
+      with:
+        name: windows
+        path: .
+
+    - name: Extract Windows build
+      run: |
+        Expand-Archive -Path windows.zip -DestinationPath . -Force
+      shell: pwsh
+
+    - name: Test - Check bitrot index search
+      run: |
+        .\windows\publish\Bruteforce.exe brute .\Tests\TestData\Petukh.torrent .\Tests\TestData\Damaged
+      shell: pwsh
+
+    - name: Test - Check file integrity
+      run: |
+        .\windows\publish\Bruteforce.exe brute .\Tests\TestData\Petukh.torrent .\Tests\TestData\Undamaged
+      shell: pwsh
+
+    - name: Test - File recovery
+      run: |
+        Copy-Item -Path .\Tests\TestData\Damaged -Destination .\Tests\TestData\DamagedCopy -Recurse
+        .\windows\publish\Bruteforce.exe brute -r .\Tests\TestData\Petukh.torrent .\Tests\TestData\DamagedCopy
+        .\windows\publish\Bruteforce.exe brute .\Tests\TestData\Petukh.torrent .\Tests\TestData\DamagedCopy
+      shell: pwsh
+
+    - name: Test - CUDA on Windows (if available)
+      run: |
+        $cudaAvailable = $false
+        try {
+          nvidia-smi | Out-Null
+          $cudaAvailable = $true
+        } catch {
+          Write-Output "CUDA not available"
+        }
+        if ($cudaAvailable) {
+          .\windows\publish\Bruteforce.exe brute -g .\Tests\TestData\Petukh.torrent .\Tests\TestData\Damaged
+        } else {
+          Write-Output "CUDA not available, skipping CUDA test"
+        }
+      shell: pwsh
+      continue-on-error: true
+
+  integration-tests-crossplatform:
+    runs-on: ubuntu-latest
+    needs: [build-crossplatform]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Download Crossplatform build
+      uses: actions/download-artifact@v3
+      with:
+        name: crossplatform
+        path: .
+
+    - name: Extract Crossplatform build
+      run: |
+        unzip -q crossplatform.zip
+
+    - name: Test - Check bitrot index search
+      run: |
+        dotnet crossplatform/publish/Bruteforce.dll brute ./Tests/TestData/Petukh.torrent ./Tests/TestData/Damaged
+
+    - name: Test - Check file integrity
+      run: |
+        dotnet crossplatform/publish/Bruteforce.dll brute ./Tests/TestData/Petukh.torrent ./Tests/TestData/Undamaged
+
+    - name: Test - File recovery
+      run: |
+        cp -r ./Tests/TestData/Damaged ./Tests/TestData/DamagedCopy
+        dotnet crossplatform/publish/Bruteforce.dll brute -r ./Tests/TestData/Petukh.torrent ./Tests/TestData/DamagedCopy
+        dotnet crossplatform/publish/Bruteforce.dll brute ./Tests/TestData/Petukh.torrent ./Tests/TestData/DamagedCopy
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-crossplatform, build-linux, build-windows, unit-tests, integration-tests-linux, integration-tests-windows, integration-tests-crossplatform]
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+    - name: Download crossplatform artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: crossplatform
+        path: .
+
+    - name: Download linux artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: linux
+        path: .
+
+    - name: Download windows artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: windows
+        path: .
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          crossplatform.zip
+          linux.zip
+          windows.zip
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
