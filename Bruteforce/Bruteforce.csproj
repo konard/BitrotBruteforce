@@ -11,12 +11,19 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Content Include="..\CudaAlignedBitrotFinder\bin\x64\Release\CudaAlignedBitrotFinder.dll">
+      <!-- In CI, CUDA DLLs are already in libs folder -->
+      <Content Condition="'$(CI)' != 'true'" Include="..\CudaAlignedBitrotFinder\bin\x64\Release\CudaAlignedBitrotFinder.dll">
         <Link>libs\CudaAlignedBitrotFinder.dll</Link>
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
-      <Content Include="..\CudaUnalignedBitrotFinder\bin\x64\Release\CudaUnalignedBitrotFinder.dll">
+      <Content Condition="'$(CI)' != 'true'" Include="..\CudaUnalignedBitrotFinder\bin\x64\Release\CudaUnalignedBitrotFinder.dll">
         <Link>libs\CudaUnalignedBitrotFinder.dll</Link>
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Condition="'$(CI)' == 'true'" Include="libs\CudaAlignedBitrotFinder.dll">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Condition="'$(CI)' == 'true'" Include="libs\CudaUnalignedBitrotFinder.dll">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
       <Content Include="..\README.md">
