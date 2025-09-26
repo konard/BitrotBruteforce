@@ -19,11 +19,13 @@ jobs:
 
     - name: Build CUDA Libraries with Docker
       run: |
-        cd Bruteforce
+        # Create libs directory if it doesn't exist
+        mkdir -p Bruteforce/libs
         # Build CUDA libraries using Docker with NVIDIA CUDA image
-        docker run --rm -v $PWD/../:/app nvidia/cuda:12.6.3-cudnn-devel-ubuntu24.04 bash -c "
+        docker run --rm -v $PWD:/app nvidia/cuda:12.6.3-cudnn-devel-ubuntu24.04 bash -c "
           apt-get update &&
           apt-get install -y cmake build-essential &&
+          mkdir -p /app/Bruteforce/libs &&
           cd /app/CudaAlignedBitrotFinder/ &&
           rm -rf build || true &&
           mkdir build &&
@@ -64,17 +66,19 @@ jobs:
 
     - name: Build CUDA Libraries for Windows
       run: |
+        # Create libs directory
+        mkdir -p Bruteforce/libs
+
         # Build CudaAlignedBitrotFinder
         cd CudaAlignedBitrotFinder
         msbuild CudaAlignedBitrotFinder.vcxproj -p:Configuration=Release -p:Platform=x64
+        # Copy the built library
+        cp bin/x64/Release/CudaAlignedBitrotFinder.dll ../Bruteforce/libs/
 
         # Build CudaUnalignedBitrotFinder
         cd ../CudaUnalignedBitrotFinder
         msbuild CudaUnalignedBitrotFinder.vcxproj -p:Configuration=Release -p:Platform=x64
-
-        # Copy built libraries to Bruteforce/libs
-        mkdir -p ../Bruteforce/libs
-        cp bin/x64/Release/CudaAlignedBitrotFinder.dll ../Bruteforce/libs/
+        # Copy the built library
         cp bin/x64/Release/CudaUnalignedBitrotFinder.dll ../Bruteforce/libs/
       shell: bash
 
@@ -117,23 +121,23 @@ jobs:
 
     - name: Run Integration Tests
       run: |
-        cd Tests/bin/Release/net8.0
+        cd Bruteforce/bin/Release/net8.0
 
         # Test bitrot detection on damaged files
         echo "Testing bitrot detection on damaged files..."
-        ./bruteforce brute TestData/Petukh.torrent TestData/Damaged/
+        ./Bruteforce brute ../../../Tests/TestData/Petukh.torrent ../../../Tests/TestData/Damaged/
 
         # Test integrity check on undamaged files
         echo "Testing integrity check on undamaged files..."
-        ./bruteforce brute TestData/Petukh.torrent TestData/Undamaged/
+        ./Bruteforce brute ../../../Tests/TestData/Petukh.torrent ../../../Tests/TestData/Undamaged/
 
         # Test CUDA functionality on Linux (if CUDA is available)
         echo "Testing CUDA functionality on Linux..."
-        ./bruteforce brute -g TestData/Petukh.torrent TestData/Damaged/ || echo "CUDA test failed or not available"
+        ./Bruteforce brute -g ../../../Tests/TestData/Petukh.torrent ../../../Tests/TestData/Damaged/ || echo "CUDA test failed or not available"
 
         # Test file restoration
         echo "Testing file restoration..."
-        ./bruteforce brute -r TestData/Petukh.torrent TestData/Damaged/ && ./bruteforce brute TestData/Petukh.torrent TestData/Damaged/
+        ./Bruteforce brute -r ../../../Tests/TestData/Petukh.torrent ../../../Tests/TestData/Damaged/ && ./Bruteforce brute ../../../Tests/TestData/Petukh.torrent ../../../Tests/TestData/Damaged/
 
   build-crossplatform:
     needs: [build-cuda-libraries, build-cuda-libraries-windows]
@@ -290,11 +294,11 @@ jobs:
 
     - name: Run Windows Integration Tests
       run: |
-        cd Tests/bin/Release/net8.0
+        cd Bruteforce/bin/Release/net8.0
 
         # Test CUDA functionality on Windows
         echo "Testing CUDA functionality on Windows..."
-        ./bruteforce.exe brute -g TestData/Petukh.torrent TestData/Damaged/
+        ./Bruteforce.exe brute -g ../../../Tests/TestData/Petukh.torrent ../../../Tests/TestData/Damaged/
       shell: bash
 
   create-release:
